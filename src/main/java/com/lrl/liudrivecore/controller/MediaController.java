@@ -3,6 +3,7 @@ package com.lrl.liudrivecore.controller;
 import com.lrl.liudrivecore.data.pojo.*;
 import com.lrl.liudrivecore.service.ImageService;
 import com.lrl.liudrivecore.service.MediaFileService;
+import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.AudioMetaJsonTemplate;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.MediaMetaTemplate;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.VideoMetaJsonTemplate;
@@ -48,7 +49,8 @@ public class MediaController {
     @RequestMapping(value = "/media", method = RequestMethod.POST, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public MediaFileMeta postMediaFile(HttpServletRequest request, HttpServletResponse response,
                                        @RequestPart("meta") MediaMetaTemplate template,
-                                       @RequestPart("file") MultipartFile file) {
+                                       @RequestPart("file") MultipartFile file,
+                                       @RequestPart("config")DefaultSaveConfiguration configuration) {
 
         String mimeType = template.getType();
         MediaFileMeta result = null;
@@ -59,11 +61,11 @@ public class MediaController {
                 return null;
             }
             if (isImageType(mimeType)) {
-                result = imageService.upload(template.asImageMeta(), file.getBytes());
+                result = imageService.upload(template.asImageMeta(), file.getBytes(), configuration);
             } else if (isVideoType(mimeType)) {
-                mediaFileService.uploadVideo(template.asVideoMeta(), file.getBytes());
+                mediaFileService.uploadVideo(template.asVideoMeta(), file.getBytes(), configuration);
             } else if (isAudioType(mimeType)) {
-                mediaFileService.uploadAudio(template.asAudioMeta(), file.getBytes());
+                mediaFileService.uploadAudio(template.asAudioMeta(), file.getBytes(), configuration);
             } else throw new RuntimeException("Wrong MIME type uploading with MediaController");
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -111,7 +113,10 @@ public class MediaController {
     @RequestMapping(value = "/video/{userId}/{subUrl}", method = RequestMethod.GET)
     public ResponseEntity<Resource> getVideoOfUserId(HttpServletRequest request, HttpServletResponse response,
                                                  @PathVariable String userId, @PathVariable String subUrl) throws IOException {
-        Resource resource = mediaFileService.getVideo(userId, userId + File.separator + subUrl);
+        Resource resource = mediaFileService.getVideo(userId, subUrl);
+        System.out.println("Debug: userId: "+userId);
+        System.out.println("Debug: subUrl: "+subUrl);
+        System.out.println("Debug: pathUrl: "+ userId + File.separator + subUrl);
         return ResponseEntity.ok()
                 .header("Content-Disposition", "inline; filename=" +  URLEncoder.encode(resource.getFilename(), "UTF-8"))
                 .contentLength(resource.contentLength())

@@ -14,21 +14,21 @@ public class LocalDriveSystemObjectReader implements ObjectFileReader {
 
     private String defaultDir;
 
-    public LocalDriveSystemObjectReader() {
-        defaultDir = "objects";
+    public LocalDriveSystemObjectReader(String rootDir) {
+        defaultDir = rootDir;
 
-        logger.info("LocalDriveSystemSaver initialed");
+        logger.info("LocalDriveSystemReader initialized.");
     }
 
 
     @Override
-    public byte[] readAll(String filename) {
-        File defaultFolder = new File(defaultDir);
-        if (!defaultFolder.exists()) return null;
+    public byte[] readAll(String location) {
+        File fileDir = new File(location);
+        if (!fileDir.exists()) return null;
 
         byte[] data;
         try {
-            FileInputStream inputStream = new FileInputStream(defaultFolder.getPath() + File.separator + filename);
+            FileInputStream inputStream = new FileInputStream(fileDir.getPath());
             data = inputStream.readAllBytes();
             inputStream.close();
         } catch (IOException e) {

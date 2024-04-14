@@ -1,6 +1,7 @@
 package com.lrl.liudrivecore.service.tool.template;
 
 import com.lrl.liudrivecore.data.pojo.ImageMeta;
+import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -28,6 +29,8 @@ public class ImageFileBase64 {
     private String author;
 
     private Integer scale;
+
+    private DefaultSaveConfiguration configuration;
 
 
     public String getFilename() {
@@ -100,6 +103,15 @@ public class ImageFileBase64 {
 
     public void setScale(Integer scale) {
         this.scale = scale;
+    }
+
+
+    public DefaultSaveConfiguration getConfiguration() {
+        return configuration;
+    }
+
+    public void setConfiguration(DefaultSaveConfiguration configuration) {
+        this.configuration = configuration;
     }
 
     public ImageMeta getMeta(){

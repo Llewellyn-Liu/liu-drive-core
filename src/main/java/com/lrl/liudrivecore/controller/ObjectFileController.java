@@ -1,11 +1,13 @@
 package com.lrl.liudrivecore.controller;
 
+import com.lrl.liudrivecore.data.dto.ObjectFileDTO;
+import com.lrl.liudrivecore.data.dto.ObjectFileMetaDTO;
 import com.lrl.liudrivecore.data.pojo.MemoBlock;
 import com.lrl.liudrivecore.data.pojo.ObjectFileMeta;
 import com.lrl.liudrivecore.service.ObjectFileService;
+import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
 import com.lrl.liudrivecore.service.tool.runtime.DriveRuntime;
 import com.lrl.liudrivecore.service.tool.template.ObjectFile;
-import com.lrl.liudrivecore.service.tool.template.frontendInteractive.ObjectFileUploadTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController()
@@ -39,7 +42,7 @@ public class ObjectFileController {
 
     @RequestMapping(value = "/object", method = RequestMethod.POST)
     public void uploadFile(HttpServletRequest request, HttpServletResponse response,
-                           @RequestBody ObjectFileUploadTemplate template) {
+                           @RequestBody ObjectFileDTO fileDTO) {
 
         logger.info("Upload File");
 
@@ -50,7 +53,7 @@ public class ObjectFileController {
 
         //Processing
         try {
-            boolean result = objectFileService.upload(template.getObjectFile());
+            boolean result = objectFileService.upload(fileDTO.getMeta(), fileDTO.getData(), fileDTO.getConfiguration());
         } catch (RuntimeException e) {
             response.setStatus(400);
         }
@@ -62,8 +65,9 @@ public class ObjectFileController {
 
     @RequestMapping(value = "/object/form", method = RequestMethod.POST, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public void uploadFileTest(HttpServletRequest request, HttpServletResponse response,
-                               @RequestPart("meta") ObjectFileMeta meta,
-                               @RequestPart("file") MultipartFile file) {
+                               @RequestPart("meta") ObjectFileMetaDTO meta,
+                               @RequestPart("file") MultipartFile file,
+                               @RequestPart("conf") DefaultSaveConfiguration configuration) {
 
         logger.info("Upload File with Param: meta: " + meta);
 
@@ -74,8 +78,9 @@ public class ObjectFileController {
             throw new RuntimeException(e);
         }
 
-        //Processing
-        boolean result = objectFileService.upload(meta, data);
+//        Processing
+        boolean result = objectFileService.upload(meta.getMeta(), data, configuration);
+
 
         if (!result) {
             response.setStatus(400);
@@ -91,17 +96,16 @@ public class ObjectFileController {
      *
      * @param request
      * @param response
-     * @param userId
-     * @param filename
+     * @param url
      * @return
      */
-    @RequestMapping(value = "/object/{userId}/{filename}", method = RequestMethod.GET)
+    @RequestMapping(value = "/object/{url}", method = RequestMethod.GET)
     public ResponseEntity<byte[]> getFile(HttpServletRequest request, HttpServletResponse response,
-                                          @PathVariable String userId, @PathVariable String filename) {
-        logger.info("Getting File: " + userId + ", filename: " + filename);
+                                          @PathVariable String url) {
+        logger.info("Getting File: " + url);
 
-        ObjectFile file = objectFileService.get(userId, filename);
-        System.out.println("Debug: null?" + (file == null) + ", " + file.toString());
+        ObjectFile file = objectFileService.get(url);
+
         if (file == null) {
             response.setStatus(400);
             return null;
@@ -109,12 +113,17 @@ public class ObjectFileController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDispositionFormData("attachment", filename); // 设置下载时的文件名
+        headers.setContentDispositionFormData("attachment", Paths.get(url).getFileName().toString()); // 设置下载时的文件名
 
         // 构建响应实体
         ResponseEntity<byte[]> responseEntity = new ResponseEntity<>(file.getData(), headers, org.springframework.http.HttpStatus.OK);
         return responseEntity;
+    }
 
+    @RequestMapping(value = "/object/{url}", method = RequestMethod.DELETE)
+    public ResponseEntity<byte[]> deleteFile(HttpServletRequest request, HttpServletResponse response,
+                                          @PathVariable String url) {
+        return null;
     }
 
     @RequestMapping(value = "/object/{userId}/page/{page}", method = RequestMethod.GET)
@@ -123,7 +132,12 @@ public class ObjectFileController {
                                                            @PathVariable String userId,
                                                            @PathVariable Integer page) {
         logger.info("Getting File Meta List: " + userId + ", page: " + page);
-        return objectFileService.getList(userId, page);
+
+        List<ObjectFileMeta> list = objectFileService.getList(userId, page);
+        for(ObjectFileMeta m: list){
+            System.out.println("abc: "+m);
+        }
+        return list;
     }
 
 

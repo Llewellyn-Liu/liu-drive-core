@@ -52,7 +52,6 @@ public class DriveRuntimeController {
         String token = userAuthService.registerToken(user.getUserId());
         userAuthService.registerSession(user.getUserId(), request.getSession().getId());
 
-
         return UserAuthTemplate.safeCopyAndAddToken(user, token);
 
     }

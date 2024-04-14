@@ -3,36 +3,46 @@ package com.lrl.liudrivecore.data.drive.localDriveSaver;
 import com.lrl.liudrivecore.service.tool.intf.ObjectFileSaver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
-public class LocalDriveSystemObjectSaver implements ObjectFileSaver{
+public class LocalDriveSystemObjectSaver implements ObjectFileSaver {
 
     private static Logger logger = LoggerFactory.getLogger(LocalDriveSystemObjectSaver.class);
 
-    private String defaultDir;
+    private String root;
 
-    public LocalDriveSystemObjectSaver() {
-defaultDir = "objects";
+    public LocalDriveSystemObjectSaver(String rootDir) {
 
-        logger.info("LocalDriveSystemSaver initialed");
+        this.root = rootDir;
+
+        logger.info("LocalDriveSystemSaver initialed: root path: "+ this.root);
     }
 
 
     //Shared in ObjectSaver and ImageSaver module
     @Override
-    public boolean save(String filename, byte[] data) {
-        System.out.println("LocalDSSaver Reached");
-        File defaultFolder = new File(defaultDir);
+    public boolean save(String location, byte[] data) {
 
-        if (!defaultFolder.exists()) {
-            logger.info("Default folder for object file not exists. Creating: " + defaultFolder.getPath());
-            defaultFolder.mkdir();
+        Path p = Paths.get(root + File.separator + location);
+
+        if (!Files.exists(p.getParent())) {
+            try {
+                Files.createDirectories(p.getParent());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            logger.info("Default folder for object file not exists. Creating: " + p.getParent().toString());
         }
 
-        File dataOutputPath = new File(defaultFolder.getPath() + File.separator + filename);
+        File dataOutputPath = new File(root + File.separator + location);
         if (dataOutputPath.exists()) {
             logger.error("File path already occupied: " + dataOutputPath.getAbsolutePath());
             return false;

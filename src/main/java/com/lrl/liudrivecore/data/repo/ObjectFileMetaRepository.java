@@ -12,6 +12,8 @@ public interface ObjectFileMetaRepository extends JpaRepository<ObjectFileMeta, 
 
     ObjectFileMeta getByFilename(String filename);
 
+    ObjectFileMeta getByUrl(String url);
+
     List<ObjectFileMeta> findAllByUserId(String userId, Pageable pageable);
 
     List<ObjectFileMeta> findAllByUserIdAndType(String userId, String type);

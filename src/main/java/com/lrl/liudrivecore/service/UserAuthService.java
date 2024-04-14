@@ -140,7 +140,6 @@ public class UserAuthService {
         User user = userRepository.findByUsername(username);
         if(user == null) return null;
 
-        logger.info(user.toString() + ", input pair: " + username + ", " + password);
         boolean checkResult = BCrypt.checkpw(password, user.getPassword());
         if (!checkResult) {
             logger.info("Authentication failed: Password");

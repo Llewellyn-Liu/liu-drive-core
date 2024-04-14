@@ -4,8 +4,9 @@ import com.lrl.liudrivecore.data.pojo.*;
 import com.lrl.liudrivecore.data.repo.AudioMetaRepository;
 import com.lrl.liudrivecore.data.repo.ImageMetaRepository;
 import com.lrl.liudrivecore.data.repo.VideoMetaRepository;
+import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
+import com.lrl.liudrivecore.service.location.URLCheck;
 import com.lrl.liudrivecore.service.tool.intf.*;
-import com.lrl.liudrivecore.service.tool.stereotype.PathStereotype;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.AudioMetaJsonTemplate;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.VideoMetaJsonTemplate;
 import jakarta.transaction.Transactional;
@@ -16,6 +17,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,12 +66,12 @@ public class MediaFileService {
 
 
     @Transactional
-    public boolean uploadVideo(VideoMeta meta, byte[] data) {
+    public boolean uploadVideo(VideoMeta meta, byte[] data, DefaultSaveConfiguration configuration) {
 
         logger.info("VideoService upload: " + meta);
 
         // load additional attrs
-        PathStereotype.buildUrl(meta);
+        URLCheck.buildUrl(meta, configuration);
         meta.setDateCreated(ZonedDateTime.now());
 
         // Save Meta
@@ -94,12 +96,12 @@ public class MediaFileService {
     }
 
     @Transactional
-    public boolean uploadAudio(AudioMeta meta, byte[] data) {
+    public boolean uploadAudio(AudioMeta meta, byte[] data, DefaultSaveConfiguration configuration) {
 
         logger.info("VideoService upload: " + meta);
 
         // load additional attrs
-        PathStereotype.buildUrl(meta);
+        URLCheck.buildUrl(meta, configuration);
         meta.setDateCreated(ZonedDateTime.now());
 
         // Save Meta
@@ -144,13 +146,14 @@ public class MediaFileService {
         return rev;
     }
 
-    public Resource getVideo(String userId, String pathUrl){
+    public Resource getVideo(String userId, String subUrl){
 
-        VideoMeta m = videoMetaRepository.getByUrl(pathUrl);
+        VideoMeta m = videoMetaRepository.getByUrl(userId + "/" + subUrl);
         if(m == null || !m.getUserId().equals(userId))
             return null;
 
-        Resource r = videoReader.getFileAsResource(pathUrl);
+        System.out.println("Debug: Video meta: "+ m.toString());
+        Resource r = videoReader.getFileAsResource(userId + File.separator + subUrl);
         return r;
 
     }

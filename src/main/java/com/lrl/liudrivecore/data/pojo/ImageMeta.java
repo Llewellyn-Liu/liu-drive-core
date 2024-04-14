@@ -21,7 +21,6 @@ public class ImageMeta extends MediaFileMeta {
     }
 
 
-
     @Override
     public String toString() {
         return "ImageMeta{" +

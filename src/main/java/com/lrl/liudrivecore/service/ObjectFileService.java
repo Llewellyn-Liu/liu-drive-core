@@ -1,8 +1,11 @@
 package com.lrl.liudrivecore.service;
 
+import com.lrl.liudrivecore.data.drive.localDriveSaver.LocalDriveSystemObjectSaver;
 import com.lrl.liudrivecore.data.pojo.MemoBlock;
 import com.lrl.liudrivecore.data.pojo.ObjectFileMeta;
 import com.lrl.liudrivecore.data.repo.ObjectFileMetaRepository;
+import com.lrl.liudrivecore.service.location.SaveConfiguration;
+import com.lrl.liudrivecore.service.location.URLCheck;
 import com.lrl.liudrivecore.service.tool.intf.MemoReader;
 import com.lrl.liudrivecore.service.tool.intf.MemoSaver;
 import com.lrl.liudrivecore.service.tool.intf.ObjectFileReader;
@@ -15,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.net.URL;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -25,7 +29,7 @@ public class ObjectFileService {
 
     private ObjectFileMetaRepository repository;
 
-    private ObjectFileSaver saver;
+    private LocalDriveSystemObjectSaver localDriveSystemObjectSaver;
 
     private ObjectFileReader reader;
 
@@ -38,12 +42,12 @@ public class ObjectFileService {
 
     @Autowired
     public ObjectFileService(ObjectFileMetaRepository repository,
-                             ObjectFileSaver saver,
+                             LocalDriveSystemObjectSaver localDriveSystemObjectSaver,
                              ObjectFileReader reader,
                              MemoSaver memoSaver,
                              MemoReader memoReader) {
         this.repository = repository;
-        this.saver = saver;
+        this.localDriveSystemObjectSaver = localDriveSystemObjectSaver;
         this.reader = reader;
         this.memoReader = memoReader;
         this.memoSaver = memoSaver;
@@ -51,21 +55,17 @@ public class ObjectFileService {
 
 
     @Transactional
-    public boolean upload(ObjectFile objectFile) throws RuntimeException{
-
-        return upload(objectFile.getMeta(), objectFile.getData());
-    }
-
-    @Transactional
-    public boolean upload(ObjectFileMeta meta, byte[] data) throws RuntimeException{
+    public boolean upload(ObjectFileMeta meta, byte[] data, SaveConfiguration configuration) throws RuntimeException{
         logger.info("ObjectFileService upload(meta): " + meta.toString());
+
+        URLCheck.buildUrl(meta, configuration);
 
         if (!saveObjectFileMeta(meta)) {
             logger.error("ObjectFileMeta failed to save.");
             throw new RuntimeException("Filename already in database");
         } else logger.info("File saved in database");
 
-        if (saveObjectFileData(meta.getType(), meta.getFilename(), data)) {
+        if (saveObjectFileData(meta.getLocation(), data)) {
             logger.info("File saved in file system.");
             return true;
         } else{
@@ -83,7 +83,6 @@ public class ObjectFileService {
         }
 
         try {
-
             meta.setDateCreated(ZonedDateTime.now());
             repository.save(meta);
         } catch (Exception e) {
@@ -95,12 +94,16 @@ public class ObjectFileService {
     }
 
     //Keep the type, objectFile handles different types.
-    private boolean saveObjectFileData(String type, String filename, byte[] data) {
+    private boolean saveObjectFileData(String location, byte[] data) {
 
-        //other types
-        //
+        if(location.startsWith("local")){
+            return localDriveSystemObjectSaver.save(location, data);
+        } else if (location.startsWith("cloud")) {
 
-        return saver.save(filename, data);
+        }else { }
+
+        return false;
+
     }
 
     public boolean uploadMemo(MemoBlock memo){
@@ -110,15 +113,14 @@ public class ObjectFileService {
 
 
     /**
-     * @param userId
-     * @param filename
+     * Direct thought. Security check is not included.
+     * @param url
      */
-    public ObjectFile get(String userId, String filename) {
+    public ObjectFile get(String url) {
 
-        ObjectFileMeta meta = repository.getByFilename(filename);
-        if (!meta.getUserId().equals(userId)) return null;
+        ObjectFileMeta meta = repository.getByUrl(url);
 
-        byte[] data = reader.readAll(filename);
+        byte[] data = reader.readAll(meta.getLocation());
 
         return ObjectFile.copy(meta, data);
     }
@@ -132,6 +134,11 @@ public class ObjectFileService {
      */
     public List<ObjectFileMeta> getList(String userId, Integer page) {
         List<ObjectFileMeta> list = repository.findAllByUserId(userId, PageRequest.of(page, PAGE_SIZE));
+
+        // Clear sensitive data
+        for(ObjectFileMeta m: list){
+            m.setLocation(null);
+        }
         return list;
     }
 

@@ -7,7 +7,6 @@ import com.lrl.liudrivecore.data.repo.AudioMetaRepository;
 import com.lrl.liudrivecore.data.repo.ImageMetaRepository;
 import com.lrl.liudrivecore.data.repo.ObjectFileMetaRepository;
 import com.lrl.liudrivecore.data.repo.VideoMetaRepository;
-import com.lrl.liudrivecore.service.tool.stereotype.PathStereotype;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.AudioMetaJsonTemplate;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.ImageMetaJsonTemplate;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.ObjectFileJsonTemplate;

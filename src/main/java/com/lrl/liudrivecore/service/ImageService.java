@@ -1,10 +1,12 @@
 package com.lrl.liudrivecore.service;
 
+import com.lrl.liudrivecore.data.dto.ImageFileDTO;
 import com.lrl.liudrivecore.data.pojo.ImageMeta;
 import com.lrl.liudrivecore.data.repo.ImageMetaRepository;
+import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
+import com.lrl.liudrivecore.service.location.URLCheck;
 import com.lrl.liudrivecore.service.tool.intf.ImageReader;
 import com.lrl.liudrivecore.service.tool.intf.ImageSaver;
-import com.lrl.liudrivecore.service.tool.stereotype.PathStereotype;
 import com.lrl.liudrivecore.service.tool.template.ImageFile;
 import com.lrl.liudrivecore.service.tool.template.ImageFileBase64;
 import jakarta.transaction.Transactional;
@@ -55,18 +57,18 @@ public class ImageService {
      * @return
      */
     @Transactional
-    public ImageMeta upload(ImageFile imageFile) {
-        return upload(imageFile.getMeta(), imageFile.getData());
+    public ImageMeta upload(ImageFileDTO imageFile) {
+        return upload(imageFile.getMeta(), imageFile.getData(), imageFile.getConfiguration());
     }
 
     @Transactional
-    public ImageMeta upload(ImageMeta meta, byte[] data) {
+    public ImageMeta upload(ImageMeta meta, byte[] data, DefaultSaveConfiguration configuration) {
 
         logger.info("ImageService upload(meta): " + meta.toString());
 
         // load additional attributes
         if (meta.getScale() == null || meta.getScale() > 2) loadImageScale(meta, data);
-        PathStereotype.buildUrl(meta);
+        URLCheck.buildUrl(meta, configuration);
         meta.setDateCreated(ZonedDateTime.now());
 
         //Save meta
@@ -87,15 +89,14 @@ public class ImageService {
 
 
     @Transactional
-    public boolean uploadBase64(ImageFileBase64 imageFile) {
+    public boolean uploadBase64(ImageMeta meta, String dataBase64, DefaultSaveConfiguration configuration) {
 
-        ImageMeta meta = imageFile.getMeta();
         logger.info("ImageService upload(meta): " + meta.toString());
-        byte[] data = atob(imageFile.getData());
+        byte[] data = atob(dataBase64);
 
         // load additive attributes
-        if (meta.getScale() == null) loadImageScale(meta, data);
-        PathStereotype.buildUrl(meta);
+        if (meta.getScale() == null || meta.getScale() > 2) loadImageScale(meta, data);
+        URLCheck.buildUrl(meta, configuration);
         meta.setDateCreated(ZonedDateTime.now());
 
         // Save meta
@@ -105,7 +106,7 @@ public class ImageService {
         } else logger.info("File saved in database");
 
         // Save original file
-        boolean dataSaved = false;
+        boolean dataSaved;
         if (dataSaved = saver.save(meta.getUrl(), data)) {
             logger.info("File saved in file system.");
         } else logger.error("Image data failed to be saved.");

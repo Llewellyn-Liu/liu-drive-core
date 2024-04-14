@@ -3,6 +3,7 @@ package com.lrl.liudrivecore.data.pojo;
 import jakarta.persistence.*;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Entity
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
@@ -25,6 +26,8 @@ public abstract class StructuredFileMeta extends Meta{
     protected String filename;
 
     protected ZonedDateTime dateCreated;
+
+    protected String location;
 
 
     public Integer getAccessibility() {
@@ -81,5 +84,13 @@ public abstract class StructuredFileMeta extends Meta{
 
     public void setDateCreated(ZonedDateTime dateCreated) {
         this.dateCreated = dateCreated;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 }

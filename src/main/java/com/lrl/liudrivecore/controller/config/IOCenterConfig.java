@@ -5,6 +5,7 @@ import com.lrl.liudrivecore.data.drive.localDriveSaver.*;
 import com.lrl.liudrivecore.data.repo.MemoRepository;
 import com.lrl.liudrivecore.service.tool.intf.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,15 +15,17 @@ public class IOCenterConfig {
     @Autowired
     private MemoRepository repository;
 
+    @Value("${drive.root:drive")
+    private String defaultRoot;
 
     @Bean
-    public ObjectFileSaver getFileSaver(){
-        return new LocalDriveSystemObjectSaver();
+    public LocalDriveSystemObjectSaver getLocalDriveSystemObjectSaver(){
+        return new LocalDriveSystemObjectSaver(defaultRoot);
     }
 
     @Bean
-    public ObjectFileReader getFileReader(){
-        return new LocalDriveSystemObjectReader();
+    public LocalDriveSystemObjectReader getLocalDriveSystemObjectReader(){
+        return new LocalDriveSystemObjectReader(defaultRoot);
     }
 
     @Bean

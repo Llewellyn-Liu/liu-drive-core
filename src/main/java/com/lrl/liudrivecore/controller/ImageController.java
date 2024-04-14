@@ -4,6 +4,7 @@ import com.lrl.liudrivecore.data.pojo.ImageMeta;
 import com.lrl.liudrivecore.service.ImageService;
 import com.lrl.liudrivecore.service.tool.runtime.DriveRuntime;
 import com.lrl.liudrivecore.service.tool.template.ImageFile;
+import com.lrl.liudrivecore.service.tool.template.ImageFileBase64;
 import com.lrl.liudrivecore.service.tool.template.frontendInteractive.ImageUploadTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,9 +38,9 @@ public class ImageController {
 
     @RequestMapping(value = "", method = RequestMethod.POST)
     public void uploadFile(HttpServletRequest request, HttpServletResponse response,
-                           @RequestBody ImageUploadTemplate template) {
-        logger.info("Upload Image: " + template.getData().substring(0, 100));
-        logger.info("Upload Image: " + template.getImageFile().getMeta());
+                           @RequestBody ImageFileBase64 imageFileBase64) {
+        logger.info("Upload Image: " + imageFileBase64.getData().substring(0, 100));
+        logger.info("Upload Image: " + imageFileBase64.getMeta());
 
 //        if (!driveRuntime.validate(template.getUsername(), template.getToken(), request.getSession().getId())) {
 //            response.setStatus(401);
@@ -47,7 +48,7 @@ public class ImageController {
 //        }
 
         //Processing
-        boolean result = imageService.uploadBase64(template.getImageFile());
+        boolean result = imageService.uploadBase64(imageFileBase64.getMeta(), imageFileBase64.getData(), imageFileBase64.getConfiguration());
 
         if (!result) {
             response.setStatus(400);
