@@ -1,12 +1,12 @@
 package com.lrl.liudrivecore.service;
 
+import com.lrl.liudrivecore.data.drive.localDriveReader.LocalDriveSystemImageReader;
+import com.lrl.liudrivecore.data.drive.localDriveSaver.LocalDriveSystemImageSaver;
 import com.lrl.liudrivecore.data.dto.ImageFileDTO;
 import com.lrl.liudrivecore.data.pojo.ImageMeta;
 import com.lrl.liudrivecore.data.repo.ImageMetaRepository;
 import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
 import com.lrl.liudrivecore.service.location.URLCheck;
-import com.lrl.liudrivecore.service.tool.intf.ImageReader;
-import com.lrl.liudrivecore.service.tool.intf.ImageSaver;
 import com.lrl.liudrivecore.service.tool.template.ImageFile;
 import com.lrl.liudrivecore.service.tool.template.ImageFileBase64;
 import jakarta.transaction.Transactional;
@@ -29,9 +29,9 @@ public class ImageService {
 
     private static Logger logger = LoggerFactory.getLogger(ImageService.class);
 
-    private ImageReader reader;
+    private LocalDriveSystemImageReader localDriveSystemImageReader;
 
-    private ImageSaver saver;
+    private LocalDriveSystemImageSaver localDriveSystemImageSaver;
 
     private static final int PAGE_SIZE = 100;
     private ImageMetaRepository repository;
@@ -39,10 +39,10 @@ public class ImageService {
 
     @Autowired
     public ImageService(ImageMetaRepository repository,
-                        ImageReader reader,
-                        ImageSaver saver) {
-        this.reader = reader;
-        this.saver = saver;
+                        LocalDriveSystemImageReader reader,
+                        LocalDriveSystemImageSaver saver) {
+        this.localDriveSystemImageReader = reader;
+        this.localDriveSystemImageSaver = saver;
         this.repository = repository;
     }
 
@@ -71,18 +71,22 @@ public class ImageService {
         URLCheck.buildUrl(meta, configuration);
         meta.setDateCreated(ZonedDateTime.now());
 
+        // Save original file
+        boolean dataSaved = saveData(meta.getLocation(), data);
+        if (dataSaved) {
+            logger.info("File saved in file system.");
+
+        } else logger.error("Image data failed to be saved.");
+
+        // Encrypt location
+        meta.setLocation(URLCheck.encrypt(meta.getLocation()));
+
         //Save meta
         if (!saveImageMeta(meta)) {
             logger.error("ImageMeta failed to save.");
             return null;
         } else logger.info("File saved in database");
 
-        // Save original file
-        boolean dataSaved = saver.save(meta.getUrl(), data);
-        if (dataSaved) {
-            logger.info("File saved in file system.");
-
-        } else logger.error("Image data failed to be saved.");
 
         return repository.getByUrl(meta.getUrl());
     }
@@ -96,8 +100,18 @@ public class ImageService {
 
         // load additive attributes
         if (meta.getScale() == null || meta.getScale() > 2) loadImageScale(meta, data);
+
         URLCheck.buildUrl(meta, configuration);
         meta.setDateCreated(ZonedDateTime.now());
+
+        // Save original file
+        boolean dataSaved;
+        if (dataSaved = saveData(meta.getLocation(), data)) {
+            logger.info("File saved in file system.");
+        } else logger.error("Image data failed to be saved.");
+
+        // Encrypt location
+        meta.setLocation(URLCheck.encrypt(meta.getLocation()));
 
         // Save meta
         if (!saveImageMeta(meta)) {
@@ -105,11 +119,6 @@ public class ImageService {
             return false;
         } else logger.info("File saved in database");
 
-        // Save original file
-        boolean dataSaved;
-        if (dataSaved = saver.save(meta.getUrl(), data)) {
-            logger.info("File saved in file system.");
-        } else logger.error("Image data failed to be saved.");
 
         return dataSaved;
     }
@@ -130,41 +139,42 @@ public class ImageService {
 
     }
 
+    /**
+     * Get Image:
+     * - Use special methods to download thumbnails.
+     */
 
     /**
-     * @param userId
-     * @param pathUrl
+     * @param url
      */
-    public ImageFileBase64 getBase64(String userId, String pathUrl) {
+    public ImageFileBase64 getThumbBase64(String url) {
 
-        ImageMeta meta = repository.getByUrl(pathUrl);
-        if (!meta.getUserId().equals(userId)) return null;
-
-        byte[] data = reader.readAll(pathUrl);
+        ImageMeta meta = repository.getByUrl(url);
+        byte[] data = readData(meta, true);
 
         return ImageFileBase64.copy(meta, data);
     }
 
 
     /**
-     * @param userId
-     * @param pathUrl
+     * @param url
+     * @return
      */
-    public ImageFile get(String userId, String pathUrl) {
+    public ImageFile get(String url) {
 
-        ImageMeta meta = repository.getByUrl(pathUrl);
-        if (!meta.getUserId().equals(userId)) return null;
+        ImageMeta meta = repository.getByUrl(url);
 
-        byte[] data = reader.readAll(pathUrl);
+        byte[] data = readData(meta, false);
 
         return ImageFile.copy(meta, data);
     }
 
-    public ImageFile getThumb(String userId, String url) {
-        ImageMeta meta = repository.getByUrl(url);
-        if (!meta.getUserId().equals(userId)) return null;
 
-        byte[] data = reader.readThumb(url);
+    public ImageFile getThumb(String url) {
+        ImageMeta meta = repository.getByUrl(url);
+
+        System.out.println("Debug:"+meta);
+        byte[] data = readData(meta, true);
 
         return ImageFile.copy(meta, data);
     }
@@ -177,19 +187,85 @@ public class ImageService {
     /**
      * Delete image file
      *
-     * @param filename
+     * @param url
      * @return
      */
-    public boolean delete(String filename) {
+    public boolean delete(String url) {
+
+        System.out.println("Debug: delete url: "+url);
         try {
-            ImageMeta meta = repository.getByFilename(filename);
+            ImageMeta meta = repository.getByUrl(url);
             repository.delete(meta);
+
+            return deleteData(meta);
         } catch (Exception e) {
+            e.printStackTrace();
             logger.error("Failed to delete from the database");
             return false;
         }
-        return saver.delete(filename);
     }
+
+    /**
+     * Read the location address and distribute the flow
+     * Data should be saved before database, which need encryption
+     *
+     * @param location
+     * @param data
+     * @return
+     */
+    private boolean saveData(String location, byte[] data) {
+
+        if (location.startsWith("local")) {
+            return localDriveSystemImageSaver.save(location.split(";")[1], data);
+        } else if (location.startsWith("cloud")) {
+
+        } else {
+
+        }
+
+        return false;
+    }
+
+    /**
+     * @param meta
+     */
+    private byte[] readData(ImageMeta meta, boolean isThumbnail) {
+
+        String location = URLCheck.decrypt(meta.getLocation());
+
+        System.out.println("Debug:"+location);
+        if (location.startsWith("local")) {
+            location = location.split(";")[1];
+            return isThumbnail ? localDriveSystemImageReader.readThumb(location)
+                    : localDriveSystemImageReader.readAll(location);
+        } else if (location.startsWith("cloud")) {
+
+        } else {
+
+        }
+
+        return null;
+    }
+
+
+    /**
+     * @param meta
+     */
+    private boolean deleteData(ImageMeta meta) {
+
+        String location = URLCheck.decrypt(meta.getLocation());
+        if (location.startsWith("local")) {
+            location = location.split(";")[1];
+            return localDriveSystemImageSaver.delete(location);
+        } else if (location.startsWith("cloud")) {
+
+        } else {
+
+        }
+
+        return false;
+    }
+
 
     private byte[] atob(String base64String) {
         return Base64.getDecoder().decode(base64String.split(",")[1]);
@@ -214,6 +290,11 @@ public class ImageService {
         }
     }
 
+    /**
+     *
+     */
+    public void reset(){
 
+    }
 
 }

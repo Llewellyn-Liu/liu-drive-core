@@ -29,7 +29,9 @@ public class LocalDriveSystemObjectSaver implements ObjectFileSaver {
 
     //Shared in ObjectSaver and ImageSaver module
     @Override
-    public boolean save(String location, byte[] data) {
+    public boolean save(String locationAddress, byte[] data) {
+
+        String location = locationStrategy( locationAddress);
 
         Path p = Paths.get(root + File.separator + location);
 
@@ -60,6 +62,10 @@ public class LocalDriveSystemObjectSaver implements ObjectFileSaver {
         }
 
         return true;
+    }
+
+    private String locationStrategy(String locationAddress) {
+        return locationAddress.split(";")[1];
     }
 
 

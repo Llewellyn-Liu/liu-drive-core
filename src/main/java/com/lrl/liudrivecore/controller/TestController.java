@@ -3,6 +3,7 @@ package com.lrl.liudrivecore.controller;
 import com.lrl.liudrivecore.service.ImageService;
 import com.lrl.liudrivecore.service.ObjectFileService;
 import com.lrl.liudrivecore.service.UserAuthService;
+import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,10 +12,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -112,5 +110,6 @@ public class TestController {
                 .contentType(MediaType.parseMediaType("video/mp4"))
                 .body(resource);
     }
+
 
 }

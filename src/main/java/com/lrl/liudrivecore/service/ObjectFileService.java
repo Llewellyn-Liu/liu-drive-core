@@ -55,25 +55,29 @@ public class ObjectFileService {
 
 
     @Transactional
-    public boolean upload(ObjectFileMeta meta, byte[] data, SaveConfiguration configuration) throws RuntimeException{
+    public boolean upload(ObjectFileMeta meta, byte[] data, SaveConfiguration configuration) throws RuntimeException {
         logger.info("ObjectFileService upload(meta): " + meta.toString());
 
         URLCheck.buildUrl(meta, configuration);
+
+        if (saveObjectFileData(meta.getLocation(), data)) {
+            logger.info("File saved in file system.");
+        } else {
+            logger.error("ObjectFile data failed to be saved.");
+            throw new RuntimeException("ObjectFile data failed to be saved on drive");
+        }
+
+        // Encrypt location
+        meta.setLocation(URLCheck.encrypt(meta.getLocation()));
 
         if (!saveObjectFileMeta(meta)) {
             logger.error("ObjectFileMeta failed to save.");
             throw new RuntimeException("Filename already in database");
         } else logger.info("File saved in database");
 
-        if (saveObjectFileData(meta.getLocation(), data)) {
-            logger.info("File saved in file system.");
-            return true;
-        } else{
-            logger.error("ObjectFile data failed to be saved.");
-            throw new RuntimeException("Filename already exists on drive");
-        }
-    }
+        return true;
 
+    }
 
 
     private boolean saveObjectFileMeta(ObjectFileMeta meta) {
@@ -96,17 +100,18 @@ public class ObjectFileService {
     //Keep the type, objectFile handles different types.
     private boolean saveObjectFileData(String location, byte[] data) {
 
-        if(location.startsWith("local")){
+        if (location.startsWith("local")) {
             return localDriveSystemObjectSaver.save(location, data);
         } else if (location.startsWith("cloud")) {
 
-        }else { }
+        } else {
+        }
 
         return false;
 
     }
 
-    public boolean uploadMemo(MemoBlock memo){
+    public boolean uploadMemo(MemoBlock memo) {
 
         return memoSaver.save(memo);
     }
@@ -114,6 +119,7 @@ public class ObjectFileService {
 
     /**
      * Direct thought. Security check is not included.
+     *
      * @param url
      */
     public ObjectFile get(String url) {
@@ -136,7 +142,7 @@ public class ObjectFileService {
         List<ObjectFileMeta> list = repository.findAllByUserId(userId, PageRequest.of(page, PAGE_SIZE));
 
         // Clear sensitive data
-        for(ObjectFileMeta m: list){
+        for (ObjectFileMeta m : list) {
             m.setLocation(null);
         }
         return list;
@@ -153,7 +159,6 @@ public class ObjectFileService {
         List<MemoBlock> list = memoReader.getListByUserId(userId);
         return list;
     }
-
 
 
 }

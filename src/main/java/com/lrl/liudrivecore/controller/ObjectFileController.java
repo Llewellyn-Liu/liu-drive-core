@@ -67,7 +67,7 @@ public class ObjectFileController {
     public void uploadFileTest(HttpServletRequest request, HttpServletResponse response,
                                @RequestPart("meta") ObjectFileMetaDTO meta,
                                @RequestPart("file") MultipartFile file,
-                               @RequestPart("conf") DefaultSaveConfiguration configuration) {
+                               @RequestPart("config") DefaultSaveConfiguration configuration) {
 
         logger.info("Upload File with Param: meta: " + meta);
 

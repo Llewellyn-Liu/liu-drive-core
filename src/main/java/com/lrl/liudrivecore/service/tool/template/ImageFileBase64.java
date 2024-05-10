@@ -170,6 +170,7 @@ public class ImageFileBase64 {
                 ", tag=" + tag +
                 ", author='" + author + '\'' +
                 ", scale=" + scale +
+                ", configuration=" + configuration +
                 '}';
     }
 }

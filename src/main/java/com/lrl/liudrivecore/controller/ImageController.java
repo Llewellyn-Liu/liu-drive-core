@@ -1,11 +1,12 @@
 package com.lrl.liudrivecore.controller;
 
+import com.lrl.liudrivecore.data.dto.ImageFileBase64ModuleDTO;
+import com.lrl.liudrivecore.data.dto.ImageFileBase64ModuleDTOTest;
 import com.lrl.liudrivecore.data.pojo.ImageMeta;
 import com.lrl.liudrivecore.service.ImageService;
+import com.lrl.liudrivecore.service.location.URLCheck;
 import com.lrl.liudrivecore.service.tool.runtime.DriveRuntime;
 import com.lrl.liudrivecore.service.tool.template.ImageFile;
-import com.lrl.liudrivecore.service.tool.template.ImageFileBase64;
-import com.lrl.liudrivecore.service.tool.template.frontendInteractive.ImageUploadTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -19,6 +20,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
 
+/**
+ *
+ */
 @RestController
 @RequestMapping(value = "/drive/image")
 public class ImageController {
@@ -38,14 +42,14 @@ public class ImageController {
 
     @RequestMapping(value = "", method = RequestMethod.POST)
     public void uploadFile(HttpServletRequest request, HttpServletResponse response,
-                           @RequestBody ImageFileBase64 imageFileBase64) {
-        logger.info("Upload Image: " + imageFileBase64.getData().substring(0, 100));
+                           @RequestBody ImageFileBase64ModuleDTO imageFileBase64) {
         logger.info("Upload Image: " + imageFileBase64.getMeta());
 
 //        if (!driveRuntime.validate(template.getUsername(), template.getToken(), request.getSession().getId())) {
 //            response.setStatus(401);
 //            return;
 //        }
+
 
         //Processing
         boolean result = imageService.uploadBase64(imageFileBase64.getMeta(), imageFileBase64.getData(), imageFileBase64.getConfiguration());
@@ -65,17 +69,18 @@ public class ImageController {
      *
      * @param request
      * @param response
-     * @param userId
-     * @param subUrl
+     * @param url
      * @return
      */
-    @RequestMapping(value = "/{userId}/{subUrl:.+}", method = RequestMethod.GET)
+    @RequestMapping(value = "/{*url}", method = RequestMethod.GET)
     public ResponseEntity<byte[]> getImage(HttpServletRequest request, HttpServletResponse response,
-                                           @PathVariable String userId, @PathVariable String subUrl) {
-        logger.info("Getting File: " + userId + ", subUrl: " + subUrl);
+                                           @PathVariable String url) {
 
-        // Only when urls are used to reach files in the local file system should be set "File.separator"
-        ImageFile file = imageService.get(userId, userId + "/" + subUrl);
+        // Remove the start "/"
+        url = url.replaceFirst("^/", "");
+        logger.info("Getting File: " + url);
+
+        ImageFile file = imageService.get(url);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(file.getMediaType());
@@ -83,7 +88,7 @@ public class ImageController {
         // Response header only allows chars encoded within a byte. For instance, chinese characters,
         // are not legal characters in HTTP headers.
         try {
-            headers.setContentDispositionFormData("attachment", URLEncoder.encode(subUrl, "UTF-8")); // 设置下载时的文件名
+            headers.setContentDispositionFormData("attachment", URLEncoder.encode(file.getFilename(), "UTF-8")); // 设置下载时的文件名
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
@@ -96,81 +101,16 @@ public class ImageController {
     /**
      * 2 of the 3 ways to get Image: get image file thumbnail(Base64)
      *
-     * @param request
-     * @param response
-     * @param userId
-     * @param subUrl
-     * @return
+     * Moved to "/drive/thumb"
      */
-    @RequestMapping(value = "/{userId}/{subUrl:.+}/thumbnail/base64", method = RequestMethod.GET)
-    public String getImageThumbnailBase64(HttpServletRequest request, HttpServletResponse response,
-                                          @PathVariable String userId, @PathVariable String subUrl) {
-        logger.info("Getting File: " + userId + ", subUrl: " + subUrl);
 
-        // Only when urls are used to reach files in the local file system should be set "File.separator"
-        return imageService.getBase64(userId, userId + "/" + subUrl).getData();
-
-    }
 
     /**
      * 3 of the 3 ways to get Image: get image file thumbnail(Content-Type: image/xxx)
      *
-     * @param request
-     * @param response
-     * @param userId
-     * @param subUrl
-     * @return
+     * Moved to "/drive/thumb"
      */
-    @RequestMapping(value = "/{userId}/{subUrl:.+}/thumbnail", method = RequestMethod.GET)
-    public ResponseEntity<byte[]> getImageThumbnail(HttpServletRequest request, HttpServletResponse response,
-                                                    @PathVariable String userId, @PathVariable String subUrl) {
-        logger.info("Getting File: " + userId + ", subUrl: " + subUrl);
 
-        // Only when urls are used to reach files in the local file system should be set "File.separator"
-        ImageFile file = imageService.getThumb(userId, userId + "/"+ subUrl);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(file.getMediaType());
-
-        // Response header only allows chars encoded within a byte. For instance, chinese characters,
-        // are not legal characters in HTTP headers.
-        // Advice by ChatGPT
-        try {
-            headers.setContentDispositionFormData("attachment", URLEncoder.encode(subUrl, "UTF-8")); // 设置下载时的文件名
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-        // 构建响应实体
-        ResponseEntity<byte[]> responseEntity = new ResponseEntity<>(file.getData(), headers, org.springframework.http.HttpStatus.OK);
-        return responseEntity;
-
-    }
-
-    @RequestMapping(value = "/{userId}/{subUrl:.+}/thumbnail/download", method = RequestMethod.GET)
-    public ResponseEntity<byte[]> downloadImageThumbnail(HttpServletRequest request, HttpServletResponse response,
-                                                    @PathVariable String userId, @PathVariable String subUrl) {
-        logger.info("Getting File: " + userId + ", subUrl: " + subUrl);
-
-        // Only when urls are used to reach files in the local file system should be set "File.separator"
-        ImageFile file = imageService.getThumb(userId, userId + "/"+ subUrl);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(file.getMediaType());
-
-        // Response header only allows chars encoded within a byte. For instance, chinese characters,
-        // are not legal characters in HTTP headers.
-        // Advice by ChatGPT
-        try {
-            headers.setContentDispositionFormData("attachment", URLEncoder.encode(subUrl, "UTF-8")); // 设置下载时的文件名
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-
-        // 构建响应实体
-        ResponseEntity<byte[]> responseEntity = new ResponseEntity<>(file.getData(), headers, org.springframework.http.HttpStatus.OK);
-        return responseEntity;
-
-    }
 
 
     @RequestMapping(value = "/{userId}/page/{page}", method = RequestMethod.GET)
@@ -185,19 +125,19 @@ public class ImageController {
     /**
      * 1 of the 3 ways to get Image: get original image file(Content-Type: image/xxx)
      *
-     * @param request
      * @param response
-     * @param userId
-     * @param subUrl
+     * @param url
      * @return
      */
-    @RequestMapping(value = "/{userId}/{subUrl:.+}", method = RequestMethod.DELETE)
-    public void deleteImage(HttpServletRequest request, HttpServletResponse response,
-                            @PathVariable String userId, @PathVariable String subUrl) {
-        logger.info("Deleting File: " + userId + ", subUrl: " + subUrl);
+    @RequestMapping(value = "/{*url}", method = RequestMethod.DELETE)
+    public void deleteImage(HttpServletResponse response,
+                            @PathVariable String url) {
+
+        url = URLCheck.readUrlFromRequestPath(url);
+        logger.info("Deleting File: " + url);
 
         // Only when urls are used to reach files in the local file system should be set "File.separator"
-        if (!imageService.delete(userId + "/" + subUrl)) {
+        if (!imageService.delete(url)) {
             response.setStatus(400);
         }
 

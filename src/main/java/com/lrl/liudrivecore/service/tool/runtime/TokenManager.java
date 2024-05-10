@@ -32,7 +32,7 @@ public class TokenManager {
             public void run() {
                 housekeeping();
             }
-        }, 1000, 60 * 1000L);
+        }, 1000, 5 * 60 * 1000L);
     }
 
     public String generateToken(String userId, TokenSpan tokenSpan, long currentTimeMillis) {
@@ -164,9 +164,10 @@ public class TokenManager {
 
     /**
      * Remove user's trail
+     *
      * @param userId
      */
-    public void removeOwnerRecord(String userId){
+    public void removeOwnerRecord(String userId) {
         removeOldEntry(userId);
     }
 
@@ -177,7 +178,7 @@ public class TokenManager {
     }
 
     private void removeOldEntry(String userId) {
-        if(!userLatestToken.containsKey(userId)) return;
+        if (!userLatestToken.containsKey(userId)) return;
 
         String token = userLatestToken.remove(userId);
 

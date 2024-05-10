@@ -14,24 +14,25 @@ public class LocalDriveSystemImageReader implements ImageReader {
 
     private static Logger logger = LoggerFactory.getLogger(LocalDriveSystemImageReader.class);
 
-    private final static String defaultDir = "image";
+    private String root;
 
-    private final String thumbDir = "thumb";
+    private final static String thumbDir = "thumb";
 
-    public LocalDriveSystemImageReader() {
+    public LocalDriveSystemImageReader(String rootDir) {
+        root = rootDir;
         logger.info("LocalDriveSystemImageReader initialed");
     }
 
 
     /**
      *
-     * @param pathUrl
+     * @param url
      * @return
      */
     @Override
-    public byte[] readAll(String pathUrl) {
+    public byte[] readAll(String url) {
 
-        Path p = Paths.get(defaultDir, pathUrl);
+        Path p = Paths.get(root, url);
 
         File defaultFolder = p.getParent().toFile();
         if (!defaultFolder.exists()) return null;
@@ -54,7 +55,7 @@ public class LocalDriveSystemImageReader implements ImageReader {
 
     @Override
     public byte[] readThumb(String url) {
-        Path p = Paths.get(defaultDir, thumbDir, url);
+        Path p = Paths.get(root, thumbDir, url);
         File defaultFolder = p.getParent().toFile();
         if (!defaultFolder.exists()) return null;
 

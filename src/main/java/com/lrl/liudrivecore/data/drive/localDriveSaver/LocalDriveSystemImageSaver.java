@@ -17,14 +17,15 @@ public class LocalDriveSystemImageSaver implements ImageSaver {
 
     private static Logger logger = LoggerFactory.getLogger(LocalDriveSystemImageSaver.class);
 
-    private final static String defaultDir = "image";
+    private String root;
 
     // Location: defaultDif/thumbnailDir
     private final static String thumbnailDir = "thumb";
 
     private static final Integer THUMBNAIL_SIZE = 256;
 
-    public LocalDriveSystemImageSaver() {
+    public LocalDriveSystemImageSaver(String rootDir) {
+        root = rootDir;
         logger.info("LocalDriveSystemSaver initialed");
     }
 
@@ -44,7 +45,7 @@ public class LocalDriveSystemImageSaver implements ImageSaver {
     @Override
     public boolean save(String filePathString, byte[] data) {
 
-        Path filePath = Paths.get(defaultDir, filePathString);
+        Path filePath = Paths.get(root, filePathString);
         if(!(Files.exists(filePath.getParent()))){
             try {
                 Files.createDirectories(filePath.getParent());
@@ -65,8 +66,8 @@ public class LocalDriveSystemImageSaver implements ImageSaver {
 
     @Override
     public boolean delete(String pathUrl) {
-        Path p = Paths.get(defaultDir, pathUrl);
-        Path thumbP = Paths.get(defaultDir,thumbnailDir, pathUrl);
+        Path p = Paths.get(root, pathUrl);
+        Path thumbP = Paths.get(root,thumbnailDir, pathUrl);
 
         File imagePath = p.toFile();
         File thumbImagePath= thumbP.toFile();
@@ -79,7 +80,7 @@ public class LocalDriveSystemImageSaver implements ImageSaver {
 
 
     private boolean saveThumbnail(String pathUrl, byte[] data) {
-        Path p = Paths.get(defaultDir, thumbnailDir, pathUrl);
+        Path p = Paths.get(root, thumbnailDir, pathUrl);
 
 
         if (!Files.exists(p.getParent())) {

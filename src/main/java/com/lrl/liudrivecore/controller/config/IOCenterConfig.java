@@ -15,8 +15,11 @@ public class IOCenterConfig {
     @Autowired
     private MemoRepository repository;
 
-    @Value("${drive.root:drive")
+    @Value("${drive.root:drive}")
     private String defaultRoot;
+
+    @Value("${drive.image.root:drive}")
+    private String defaultImageRoot;
 
     @Bean
     public LocalDriveSystemObjectSaver getLocalDriveSystemObjectSaver(){
@@ -29,12 +32,12 @@ public class IOCenterConfig {
     }
 
     @Bean
-    public ImageSaver getImageSaver(){
-        return new LocalDriveSystemImageSaver();
+    public LocalDriveSystemImageSaver getLocalDriveSystemImageSaver(){
+        return new LocalDriveSystemImageSaver(defaultImageRoot);
     }
     @Bean
-    public ImageReader getImageReader(){
-        return new LocalDriveSystemImageReader();
+    public LocalDriveSystemImageReader getLocalDriveSystemImageReader(){
+        return new LocalDriveSystemImageReader(defaultImageRoot);
     }
 
     @Bean

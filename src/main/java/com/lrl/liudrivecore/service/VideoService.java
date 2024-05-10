@@ -2,9 +2,10 @@ package com.lrl.liudrivecore.service;
 
 import com.lrl.liudrivecore.data.pojo.VideoMeta;
 import com.lrl.liudrivecore.data.repo.VideoMetaRepository;
+import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
+import com.lrl.liudrivecore.service.location.URLCheck;
 import com.lrl.liudrivecore.service.tool.intf.VideoReader;
 import com.lrl.liudrivecore.service.tool.intf.VideoSaver;
-import com.lrl.liudrivecore.service.tool.stereotype.PathStereotype;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,19 +37,23 @@ public class VideoService {
 
 
     @Transactional
-    public boolean upload(VideoMeta meta, byte[] data) {
+    public boolean upload(VideoMeta meta, byte[] data, DefaultSaveConfiguration configuration) {
 
         logger.info("VideoService upload: " + meta);
 
         // load additional attrs
-        PathStereotype.buildUrl(meta);
+        URLCheck.buildUrl(meta, configuration);
         meta.setDateCreated(ZonedDateTime.now());
+
+        // Save Data
+        saveFileData(meta.getUrl(), data);
+
+        meta.setLocation(URLCheck.encrypt(meta.getUrl()));
 
         // Save Meta
         saveVideoMeta(meta);
 
-        // Save Data
-        saveFileData(meta.getUrl(), data);
+
 
         return true;
     }
