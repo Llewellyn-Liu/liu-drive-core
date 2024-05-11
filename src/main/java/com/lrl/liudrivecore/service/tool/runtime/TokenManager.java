@@ -8,10 +8,9 @@ import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.PriorityQueue;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 @Service
 public class TokenManager {
@@ -33,15 +32,29 @@ public class TokenManager {
                 housekeeping();
             }
         }, 1000, 5 * 60 * 1000L);
+
+
     }
 
-    public String generateToken(String userId, TokenSpan tokenSpan, long currentTimeMillis) {
+    /**
+     * Generate MD5 digest of current user state as token
+     * @param userId
+     * @param tokenSpan
+     * @param start
+     * @return
+     */
+    public String generateToken(String userId, TokenSpan tokenSpan, long start) {
 
-        long timestamp = currentTimeMillis + tokenSpan.showSpan();
+        long timestamp = start + tokenSpan.showSpan();
         String pattern = userId + ";" + timestamp;
-        String salt = System.getenv("LIU-salt");
-        TextEncryptor encryptor = Encryptors.text(System.getenv("LIU-encryptString"), salt);
-        String token = encryptor.encrypt(pattern);
+
+        MessageDigest md = null;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        String token = Base64.getEncoder().encodeToString(md.digest(pattern.getBytes()));
         return token;
     }
 
