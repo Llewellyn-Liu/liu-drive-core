@@ -1,13 +1,18 @@
 package com.lrl.liudrivecore.service;
 
 
+import com.lrl.liudrivecore.data.pojo.OAuthMapping;
 import com.lrl.liudrivecore.data.pojo.User;
+import com.lrl.liudrivecore.data.repo.OAuthMappingRepository;
 import com.lrl.liudrivecore.data.repo.UserRepository;
 import com.lrl.liudrivecore.service.tool.mune.TokenSpan;
 import com.lrl.liudrivecore.service.tool.runtime.SessionManager;
 import com.lrl.liudrivecore.service.tool.runtime.TokenManager;
 import com.lrl.liudrivecore.service.tool.template.TokenTemplate;
 import com.lrl.liudrivecore.service.tool.template.UserAuthTemplate;
+import com.lrl.liudrivecore.service.tool.template.frontendInteractive.UserDigest;
+import com.lrl.liudrivecore.service.tool.template.frontendInteractive.UserWithLinkedAccount;
+import com.lrl.liudrivecore.service.tool.template.oauth.github.OAuthGitHubUserInfo;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,12 +30,16 @@ public class UserAuthService {
     private final SessionManager sessionManager;
     private UserRepository userRepository;
 
+    private OAuthMappingRepository oAuthMappingRepository;
+
     @Autowired
     public UserAuthService(UserRepository repository,
+                           OAuthMappingRepository oAuthMappingRepository,
                            TokenManager tokenManager, SessionManager sessionManager) {
         this.userRepository = repository;
         this.tokenManager = tokenManager;
         this.sessionManager = sessionManager;
+        this.oAuthMappingRepository = oAuthMappingRepository;
     }
 
     private static TokenSpan defaultSpan = TokenSpan.INITIAL_SPAN;
@@ -165,5 +174,37 @@ public class UserAuthService {
         int result = userRepository.deleteUserByUsername(username);
         System.out.println(result);
         tokenManager.removeOwnerRecord(user.getUserId());
+    }
+
+    /**
+     * This function is related to OAuth2 endpoints for user login and registration
+     * Look up in the mapping table to see if user has already registered
+     * @param userInfo
+     * @return
+     */
+    public User getUserMapping(OAuthGitHubUserInfo userInfo) {
+        OAuthMapping om = oAuthMappingRepository.getOAuthMappingByUrl(userInfo.getUrl());
+        if(om != null){
+            return  userRepository.findByUsername(om.getUserId());
+        }
+        else return null;
+
+    }
+
+
+    /**
+     * This function is related to OAuth2 endpoints for user login and registration
+     * @param userInfo
+     * @return
+     */
+    public UserWithLinkedAccount prepareUserTemplate(OAuthGitHubUserInfo userInfo, String method) {
+
+        UserWithLinkedAccount user = new UserWithLinkedAccount();
+        user.setUserId("user-"+userInfo.getDigest().substring(0, 10));
+        user.setUsername(userInfo.getEmail() == null ? userInfo.getName() : userInfo.getEmail());
+        user.addMethod(userInfo.getUrl());
+        user.addMethod(method);
+        user.addUrl(userInfo.getUrl());
+        return user;
     }
 }

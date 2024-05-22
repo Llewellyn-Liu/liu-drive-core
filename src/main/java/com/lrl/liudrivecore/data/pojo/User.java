@@ -9,19 +9,19 @@ import java.time.ZonedDateTime;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    protected Long id;
 
     @Column
-    private String username;
+    protected String username;
 
     @Column
-    private String password;
+    protected String password;
 
     @Column
-    private ZonedDateTime accountCreated;
+    protected ZonedDateTime accountCreated;
 
     @Column
-    private String userId;
+    protected String userId;
 
     public User() {
     }
