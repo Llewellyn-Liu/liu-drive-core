@@ -1,16 +1,10 @@
 package com.lrl.liudrivecore.controller;
 
-import com.lrl.liudrivecore.service.tool.template.frontendInteractive.UserDigest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.net.http.HttpClient;
-import java.util.HashSet;
 
 @RestController("/drive/user")
 public class UserController {

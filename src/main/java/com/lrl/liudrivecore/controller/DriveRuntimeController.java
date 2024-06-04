@@ -2,36 +2,29 @@ package com.lrl.liudrivecore.controller;
 
 import com.lrl.liudrivecore.data.pojo.User;
 import com.lrl.liudrivecore.service.UserAuthService;
-import com.lrl.liudrivecore.service.tool.mune.TokenSpan;
-import com.lrl.liudrivecore.service.tool.runtime.SessionManager;
-import com.lrl.liudrivecore.service.tool.template.UserAuthTemplate;
-import com.lrl.liudrivecore.service.tool.template.frontendInteractive.UserInfoAlterationTemplate;
+import com.lrl.liudrivecore.service.util.template.UserAuthTemplate;
+import com.lrl.liudrivecore.service.util.template.frontendInteractive.UserInfoAlterationTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(value = "/drive")
+@RequestMapping(value = "/v2")
 public class DriveRuntimeController {
 
     private static Logger logger = LoggerFactory.getLogger(DriveRuntimeController.class);
-    private final SessionManager sessionManager;
 
     UserAuthService userAuthService;
 
     @Autowired
-    public DriveRuntimeController(UserAuthService userAuthService, SessionManager sessionManager) {
+    public DriveRuntimeController(UserAuthService userAuthService) {
         this.userAuthService = userAuthService;
-        this.sessionManager = sessionManager;
     }
 
-    @RequestMapping(value = "/auth", method = RequestMethod.POST)
+    @RequestMapping(value = "/drive/auth", method = RequestMethod.POST)
     public UserAuthTemplate userAuthentication(HttpServletRequest request, HttpServletResponse response,
                                                @RequestBody UserAuthTemplate userAuthData) {
 
@@ -41,18 +34,23 @@ public class DriveRuntimeController {
 
         if (user == null) {
 
-            response.setStatus(400);
+
+            response.setStatus(403);
             logger.info("Authentication failed.");
             return null;
         } else {
+
+            String token = userAuthService.attachToken(user);
+
+            response.setHeader("Authorization", "Bearer "+token);
             logger.info("Authentication passed.");
         }
 
         //Register in runtime modules
-        String token = userAuthService.registerToken(user.getUserId());
-        userAuthService.registerSession(user.getUserId(), request.getSession().getId());
+//        String token = userAuthService.registerToken(user.getUserId());
+//        userAuthService.registerSession(user.getUserId(), request.getSession().getId());
 
-        return UserAuthTemplate.safeCopyAndAddToken(user, token);
+        return UserAuthTemplate.safeCopyAndAddToken(user, "testToken");
 
     }
 
@@ -65,25 +63,21 @@ public class DriveRuntimeController {
      * @param userAuthData
      * @return
      */
-    @RequestMapping(value = "/security/token", method = RequestMethod.PUT)
+    @RequestMapping(value = "/token", method = RequestMethod.PUT)
     public UserAuthTemplate updateUserTokenShort(HttpServletRequest request, HttpServletResponse response, @RequestBody UserAuthTemplate userAuthData) {
 
 
         logger.debug("Token: controller: " + userAuthData.toString());
-        if (!userAuthService.quickAuth(userAuthData, request.getSession().getId())) {
-            response.setStatus(400);
-            logger.info("Authentication failed.");
-            return null;
-        }
 
         //Refresh the token with short time span
-        userAuthService.updateToken(userAuthData, TokenSpan.SHORT_SPAN);
+        userAuthService.updateToken(userAuthData.getUserId(), request.getHeader("Authorization").split(" ")[1]);
 
         return userAuthData;
 
     }
 
     /**
+     * M4.1.4 v0.1.5
      * Register user info
      *
      * @param request
@@ -92,12 +86,12 @@ public class DriveRuntimeController {
      * @return
      */
 
-    @RequestMapping(value = "/user", method = RequestMethod.POST)
+    @RequestMapping(value = "/drive/auth/user", method = RequestMethod.POST)
     public UserAuthTemplate register(HttpServletRequest request, HttpServletResponse response, @RequestBody User user) {
 
         logger.info("DriveUser Register: Unfolded input: " + user.toString());
 
-        if (userAuthService.hasUser(user.getUsername())) {
+        if (userAuthService.hasUser(user.getUserId())) {
             response.setStatus(400);
             return null;
         }
@@ -113,16 +107,17 @@ public class DriveRuntimeController {
 
 
     /**
+     * M4.1.5 Modify user info
      * @param request
      * @param response
      * @param template
      * @return
      */
-    @RequestMapping(value = "/user", method = RequestMethod.PUT)
-    public void alterUserInfo(HttpServletRequest request, HttpServletResponse response, UserInfoAlterationTemplate template) {
+    @RequestMapping(value = "/drive/auth/user/{userId}", method = RequestMethod.PUT)
+    public void alterUserInfo(HttpServletRequest request, HttpServletResponse response, @RequestBody UserInfoAlterationTemplate template, @PathVariable String userId) {
 
         logger.info("User Alter Info: Unfolded input: " + template.toString());
-        if (!userAuthService.quickAuth(template.getUserAuthTemplate(), request.getSession().getId())) {
+        if (!userAuthService.validToken(request.getHeader("Authorization"), userId)) {
             response.setStatus(400);
             logger.info("Authentication failed.");
             return;
@@ -135,15 +130,66 @@ public class DriveRuntimeController {
 
     }
 
-    @RequestMapping(value = "/user", method = RequestMethod.DELETE)
-    public void deleteUserInfo(HttpServletRequest request,HttpServletResponse response, UserInfoAlterationTemplate template){
+    /**
+     * M4.1.6 Remove user info
+     * @param request
+     * @param response
+     * @param template
+     * @param userId
+     */
+    @RequestMapping(value = "/drive/auth/user/{userId}", method = RequestMethod.DELETE)
+    public void deleteUserInfo(HttpServletRequest request, HttpServletResponse response, @RequestBody UserAuthTemplate template, @PathVariable String userId){
         logger.info("Delete User Info: Unfolded input: " + template.toString());
-        if (!userAuthService.quickAuth(template.getUserAuthTemplate(), request.getSession().getId())) {
+
+
+        if (!userAuthService.validToken(template.getUserId(), request.getHeader("Authorization"))) {
+            response.setStatus(400);
+            logger.info("Token invalid.");
+            return;
+        }
+
+        if(userAuthService.authenticate(template) == null){
             response.setStatus(400);
             logger.info("Authentication failed.");
             return;
         }
 
         userAuthService.deleteUser(template.getUsername());
+        response.setStatus(204);
+    }
+
+    /**
+     * M4.1.7 Get user secret
+     * @param request
+     * @param response
+     * @param template
+     * @param userId
+     * @return
+     */
+    @RequestMapping(value = "/drive/auth/user/{userId}", method = RequestMethod.GET)
+    public UserAuthTemplate getUserInfo(HttpServletRequest request, HttpServletResponse response, @RequestBody UserAuthTemplate template, @PathVariable String userId){
+        logger.info("GET User Info: Unfolded input: " + template.toString());
+
+
+        if (!userAuthService.validToken(template.getUserId(), request.getHeader("Authorization"))) {
+            response.setStatus(400);
+            logger.info("Token invalid.");
+            return null;
+        }
+
+        if(userAuthService.authenticate(template) == null){
+            response.setStatus(400);
+            logger.info("Authentication failed.");
+            return null;
+        }
+
+        UserAuthTemplate result = userAuthService.getUser(template.getUserId());
+        if(result == null){
+            response.setStatus(404);
+            return null;
+        }
+
+        response.setStatus(204);
+        return result;
     }
 }

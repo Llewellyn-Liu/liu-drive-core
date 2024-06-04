@@ -5,14 +5,11 @@ import com.lrl.liudrivecore.data.pojo.OAuthMapping;
 import com.lrl.liudrivecore.data.pojo.User;
 import com.lrl.liudrivecore.data.repo.OAuthMappingRepository;
 import com.lrl.liudrivecore.data.repo.UserRepository;
-import com.lrl.liudrivecore.service.tool.mune.TokenSpan;
-import com.lrl.liudrivecore.service.tool.runtime.SessionManager;
-import com.lrl.liudrivecore.service.tool.runtime.TokenManager;
-import com.lrl.liudrivecore.service.tool.template.TokenTemplate;
-import com.lrl.liudrivecore.service.tool.template.UserAuthTemplate;
-import com.lrl.liudrivecore.service.tool.template.frontendInteractive.UserDigest;
-import com.lrl.liudrivecore.service.tool.template.frontendInteractive.UserWithLinkedAccount;
-import com.lrl.liudrivecore.service.tool.template.oauth.github.OAuthGitHubUserInfo;
+import com.lrl.liudrivecore.service.util.mune.TokenSpan;
+import com.lrl.liudrivecore.service.security.TokenManager;
+import com.lrl.liudrivecore.service.util.template.UserAuthTemplate;
+import com.lrl.liudrivecore.service.util.template.frontendInteractive.UserWithLinkedAccount;
+import com.lrl.liudrivecore.service.util.template.oauth.github.OAuthGitHubUserInfo;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,13 +18,14 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
 import java.time.ZonedDateTime;
+import java.util.Base64;
 
 
 @Service
 public class UserAuthService {
 
     private final TokenManager tokenManager;
-    private final SessionManager sessionManager;
+
     private UserRepository userRepository;
 
     private OAuthMappingRepository oAuthMappingRepository;
@@ -35,10 +33,9 @@ public class UserAuthService {
     @Autowired
     public UserAuthService(UserRepository repository,
                            OAuthMappingRepository oAuthMappingRepository,
-                           TokenManager tokenManager, SessionManager sessionManager) {
+                           TokenManager tokenManager) {
         this.userRepository = repository;
         this.tokenManager = tokenManager;
-        this.sessionManager = sessionManager;
         this.oAuthMappingRepository = oAuthMappingRepository;
     }
 
@@ -57,7 +54,7 @@ public class UserAuthService {
 
         logger.info("Authentication:" + template.toString());
 
-        if (template.getPassword() == null && template.getToken() == null) {
+        if (template.getPassword() == null || template.getPassword().equals("")) {
             logger.info("Authentication failed: No password or token found.");
             return null;
         } else {
@@ -65,25 +62,6 @@ public class UserAuthService {
         }
     }
 
-    /**
-     * Quick authentication which doesn't need persistence layer queries. Credentials are saved in runtime memory.
-     *
-     * @param userAuthData
-     * @return true - authentication passed.
-     * false - authentication failed or other exception during authentication.
-     */
-    public boolean quickAuth(UserAuthTemplate userAuthData, String sessionId) {
-
-        boolean validSession = sessionManager.contains(userAuthData.getUserId(), sessionId);
-
-        boolean validToken = tokenManager.validToken(userAuthData.getToken());
-
-        //Questionable: Should every request validate the timestamp or trust the TokenManager can clean the expired token immediately
-//        boolean validTimestamp = TokenManager.getInstance().validTimestamp();
-
-        return validSession && validToken;
-
-    }
 
     /**
      * Hand over the userId to TokenManager
@@ -92,26 +70,9 @@ public class UserAuthService {
      * @return token
      */
     public String registerToken(String userId) {
-
-        TokenTemplate tokenTemplate = tokenManager.generateTokenElement(userId, defaultSpan);
-        tokenManager.push(tokenTemplate);
-        return tokenTemplate.getToken();
+        return null;
     }
 
-    /**
-     * Extend token state for userId
-     *
-     * @param userAuthData
-     * @param tokenSpan
-     * @return
-     */
-    public TokenTemplate updateToken(UserAuthTemplate userAuthData, TokenSpan tokenSpan) {
-
-        TokenTemplate newToken = tokenManager.generateTokenElement(userAuthData.getUserId(), tokenSpan);
-        tokenManager.update(newToken);
-
-        return newToken;
-    }
 
     /**
      * Register user into database
@@ -136,10 +97,10 @@ public class UserAuthService {
     public User updateUserInfo(User newUserInfo) {
 
         User user = userRepository.findByUsername(newUserInfo.getUsername());
-        String oldUserId = user.getUserId();
+
 
         user.setPassword(newUserInfo.getPassword());
-        user.setUserId(newUserInfo.getUserId());
+
 
         return userRepository.save(user);
     }
@@ -147,7 +108,7 @@ public class UserAuthService {
 
     private User verifyPasswordAndGetUser(String username, String password) {
         User user = userRepository.findByUsername(username);
-        if(user == null) return null;
+        if (user == null) return null;
 
         boolean checkResult = BCrypt.checkpw(password, user.getPassword());
         if (!checkResult) {
@@ -157,54 +118,87 @@ public class UserAuthService {
 
     }
 
-    public void registerSession(String userId, String id) {
-        sessionManager.registerSession(userId, id);
-    }
 
-    public boolean hasUser(String username) {
+    public boolean hasUser(String userId) {
 
-        return userRepository.findByUsername(username) != null;
+        return userRepository.findByUserId(userId) != null;
     }
 
 
     @Transactional
-    public void deleteUser(String username) {
-        User user = userRepository.findByUsername(username);
+    public void deleteUser(String userId) {
+        User user = userRepository.findByUserId(userId);
 
-        int result = userRepository.deleteUserByUsername(username);
-        System.out.println(result);
+        userRepository.delete(user);
         tokenManager.removeOwnerRecord(user.getUserId());
     }
 
     /**
      * This function is related to OAuth2 endpoints for user login and registration
      * Look up in the mapping table to see if user has already registered
+     *
      * @param userInfo
      * @return
      */
     public User getUserMapping(OAuthGitHubUserInfo userInfo) {
         OAuthMapping om = oAuthMappingRepository.getOAuthMappingByUrl(userInfo.getUrl());
-        if(om != null){
-            return  userRepository.findByUsername(om.getUserId());
-        }
-        else return null;
+        if (om != null) {
+            return userRepository.findByUserId(om.getUserId());
+        } else return null;
 
     }
 
 
     /**
      * This function is related to OAuth2 endpoints for user login and registration
+     *
      * @param userInfo
      * @return
      */
     public UserWithLinkedAccount prepareUserTemplate(OAuthGitHubUserInfo userInfo, String method) {
 
         UserWithLinkedAccount user = new UserWithLinkedAccount();
-        user.setUserId("user-"+userInfo.getDigest().substring(0, 10));
+        user.setUserId("user-" + userInfo.getDigest().substring(0, 10));
         user.setUsername(userInfo.getEmail() == null ? userInfo.getName() : userInfo.getEmail());
         user.addMethod(userInfo.getUrl());
         user.addMethod(method);
         user.addUrl(userInfo.getUrl());
         return user;
+    }
+
+    public String attachToken(User user) {
+
+        return tokenManager.generateToken(user, TokenSpan.INITIAL_SPAN);
+
+    }
+
+    public String updateToken(String userId, String token) {
+
+        return tokenManager.updateToken(userId, TokenSpan.SHORT_SPAN, token);
+
+    }
+
+    public boolean validToken(String userId, String authorizationHeaderValue) {
+
+        if (authorizationHeaderValue == null || authorizationHeaderValue.equals("")) return false;
+
+        String[] parts = authorizationHeaderValue.split(" ");
+        if (parts[0].equals("Bearer")) {
+            return tokenManager.validToken(userId, parts[1]);
+        } else if (parts[0].equals("Basic")) {
+
+            String[] pair = new String(Base64.getDecoder().decode(parts[1])).split(":");
+            User u = verifyPasswordAndGetUser(pair[0], pair[1]);
+            if (u == null || u.getUserId() != userId) return false;
+            else return true;
+        }
+
+        return false;
+    }
+
+    public UserAuthTemplate getUser(String userId) {
+        if(hasUser(userId)){
+            return UserAuthTemplate.safeCopy(userRepository.findByUserId(userId));
+        }else return null;
     }
 }

@@ -3,6 +3,7 @@ package com.lrl.liudrivecore.data.pojo;
 import jakarta.persistence.*;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "DR_USER")
@@ -22,6 +23,9 @@ public class User {
 
     @Column
     protected String userId;
+
+    @Column
+    protected String tags;
 
     public User() {
     }

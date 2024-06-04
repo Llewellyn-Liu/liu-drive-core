@@ -1,6 +1,6 @@
 package com.lrl.liudrivecore.data.drive.localDriveReader;
 
-import com.lrl.liudrivecore.service.tool.intf.ImageReader;
+import com.lrl.liudrivecore.service.util.intf.ImageReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,13 +26,13 @@ public class LocalDriveSystemImageReader implements ImageReader {
 
     /**
      *
-     * @param url
+     * @param location
      * @return
      */
     @Override
-    public byte[] readAll(String url) {
-
-        Path p = Paths.get(root, url);
+    public byte[] readAll(String location) {
+        String diskPath = locationStrategy(location);
+        Path p = Paths.get(root, diskPath);
 
         File defaultFolder = p.getParent().toFile();
         if (!defaultFolder.exists()) return null;
@@ -49,13 +49,15 @@ public class LocalDriveSystemImageReader implements ImageReader {
     }
 
     @Override
-    public int bufferRead(String filename, byte[] buffer, Integer start, Integer end) {
+    public int bufferRead(String location, byte[] buffer, Integer start, Integer end) {
         return 0;
     }
 
     @Override
-    public byte[] readThumb(String url) {
-        Path p = Paths.get(root, thumbDir, url);
+    public byte[] readThumb(String location) {
+
+        String diskPath = locationStrategy(location);
+        Path p = Paths.get(root, thumbDir, diskPath);
         File defaultFolder = p.getParent().toFile();
         if (!defaultFolder.exists()) return null;
 
@@ -68,5 +70,9 @@ public class LocalDriveSystemImageReader implements ImageReader {
             throw new RuntimeException(e);
         }
         return data;
+    }
+
+    private String locationStrategy(String locationAddress) {
+        return locationAddress.split(";")[1];
     }
 }

@@ -9,7 +9,9 @@ import java.util.List;
 @Repository
 public interface MemoRepository extends MongoRepository<MemoBlock, String> {
 
-    MemoBlock findByTitle(String title);
+    MemoBlock findByEtag(String etag);
 
     List<MemoBlock> findAllByUserId(String userId);
+
+    int removeMemoBlockByEtag(String etag);
 }

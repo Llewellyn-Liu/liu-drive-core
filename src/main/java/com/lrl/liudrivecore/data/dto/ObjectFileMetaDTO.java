@@ -101,7 +101,7 @@ public class ObjectFileMetaDTO {
         meta.setUrl(url);
         meta.setDateCreated(ZonedDateTime.now());
         meta.setUserId(userId);
-        if(tags!=null){
+        if(tags!=null && tags.size() != 0){
             String plainTags = "";
             for(String t: tags){
                 plainTags+=t;
@@ -113,4 +113,17 @@ public class ObjectFileMetaDTO {
         return meta;
     }
 
+    @Override
+    public String toString() {
+        return "ObjectFileMetaDTO{" +
+                "accessibility=" + accessibility +
+                ", userId='" + userId + '\'' +
+                ", tags=" + tags +
+                ", type='" + type + '\'' +
+                ", filename='" + filename + '\'' +
+                ", url='" + url + '\'' +
+                ", dateCreated=" + dateCreated +
+                ", token='" + token + '\'' +
+                '}';
+    }
 }

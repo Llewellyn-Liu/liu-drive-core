@@ -1,6 +1,6 @@
 package com.lrl.liudrivecore.data.drive.localDriveSaver;
 
-import com.lrl.liudrivecore.service.tool.intf.ImageSaver;
+import com.lrl.liudrivecore.service.util.intf.ImageSaver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,42 +32,51 @@ public class LocalDriveSystemImageSaver implements ImageSaver {
 
 
     /**
-     * @param pathUrl
+     * @param location
      * @param base64String Original string which formats like data:image/jpeg;base64,/9j/4AAQSkZJRgABA
      * @return
      */
     @Override
-    public boolean save(String pathUrl, String base64String) {
+    public boolean save(String location, String base64String, boolean mandatory) {
         byte[] data = Base64.getDecoder().decode(base64String.split(",")[1]);
-        return save(pathUrl, data);
+        return save(location, data, mandatory);
     }
 
     @Override
-    public boolean save(String filePathString, byte[] data) {
+    public boolean save(String location, byte[] data, boolean mandatory) {
 
-        Path filePath = Paths.get(root, filePathString);
-        if(!(Files.exists(filePath.getParent()))){
+        String diskPath = locationStrategy(location);
+        Path locationPath = Paths.get(root, diskPath);
+        if(!(Files.exists(locationPath.getParent()))){
             try {
-                Files.createDirectories(filePath.getParent());
+                Files.createDirectories(locationPath.getParent());
             } catch (IOException e) {
                 logger.error("LocalDriveSystemImageSaver failed to create a folder");
                 return false;
             }
         }
 
-        File dataOutputPath = filePath.toFile();
-        if(saveAsFile(dataOutputPath, data) == false) return false;
+        File dataOutputLocation = locationPath.toFile();
+        if(saveAsFile(dataOutputLocation, data, false) == false) return false;
 
-        saveThumbnail(filePathString, data);
+        saveThumbnail(diskPath, data);
         logger.info("Thumbnail saved");
 
         return true;
     }
 
     @Override
-    public boolean delete(String pathUrl) {
-        Path p = Paths.get(root, pathUrl);
-        Path thumbP = Paths.get(root,thumbnailDir, pathUrl);
+    public boolean delete(String location, boolean mandatory) {
+        if(mandatory) return delete(location);
+        else throw new RuntimeException("Delete method not implementedd");
+    }
+
+
+    @Override
+    public boolean delete(String location) {
+        String diskPath = locationStrategy(location);
+        Path p = Paths.get(root, location);
+        Path thumbP = Paths.get(root,thumbnailDir, location);
 
         File imagePath = p.toFile();
         File thumbImagePath= thumbP.toFile();
@@ -127,15 +136,15 @@ public class LocalDriveSystemImageSaver implements ImageSaver {
         return true;
     }
 
-    private boolean saveAsFile(File file, byte[] data) {
+    private boolean saveAsFile(File file, byte[] data, boolean mandatory) {
 
-        if (file.exists()) {
+        if (file.exists() && !mandatory) {
             logger.error("File path already occupied: " + file.getAbsolutePath());
             return false;
         } else {
 
             try {
-                file.createNewFile();
+                if(!file.exists()) file.createNewFile();
                 FileOutputStream fos = new FileOutputStream(file);
                 BufferedOutputStream output = new BufferedOutputStream(fos);
                 output.write(data);
@@ -147,6 +156,10 @@ public class LocalDriveSystemImageSaver implements ImageSaver {
         }
 
         return true;
+    }
+
+    private String locationStrategy(String locationAddress) {
+        return locationAddress.split(";")[1];
     }
 
 }

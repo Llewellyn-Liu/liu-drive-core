@@ -4,8 +4,11 @@ import jakarta.persistence.GenerationType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
+import java.util.Map;
+
 @Document("Memo")
-public class MemoBlock extends Meta{
+public class  MemoBlock extends Meta{
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private String id;
@@ -14,12 +17,14 @@ public class MemoBlock extends Meta{
 
     private String userId;
 
-    private String tags;
+    private List<String> tags;
 
     private String dateCreated;
-    private String title;
 
-    private String content;
+
+    private Map<String, Object> data;
+
+    private String etag;
 
 
     public String getId() {
@@ -46,11 +51,11 @@ public class MemoBlock extends Meta{
         this.userId = userId;
     }
 
-    public String getTags() {
+    public List<String> getTags() {
         return tags;
     }
 
-    public void setTags(String tags) {
+    public void setTags(List<String> tags) {
         this.tags = tags;
     }
 
@@ -62,33 +67,32 @@ public class MemoBlock extends Meta{
         this.dateCreated = dateCreated;
     }
 
-    public String getTitle() {
-        return title;
+    public Map<String, Object> getData() {
+        return data;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
+    public void setData(Map<String, Object> data) {
+        this.data = data;
     }
 
-    public String getContent() {
-        return content;
+    public String getEtag() {
+        return etag;
     }
 
-    public void setContent(String content) {
-        this.content = content;
+    public void setEtag(String eTag) {
+        this.etag = eTag;
     }
-
-
 
     @Override
     public String toString() {
         return "MemoBlock{" +
-                "title='" + title + '\'' +
-                ", content='" + content + '\'' +
+                "id='" + id + '\'' +
                 ", accessibility=" + accessibility +
                 ", userId='" + userId + '\'' +
-                ", tags=" + tags +
-                ", timeCreated=" + dateCreated +
+                ", tags='" + tags + '\'' +
+                ", dateCreated='" + dateCreated + '\'' +
+                ", data='" + data + '\'' +
+                ", etag='" + etag + '\'' +
                 '}';
     }
 }

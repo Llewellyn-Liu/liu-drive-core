@@ -3,12 +3,16 @@ package com.lrl.liudrivecore.controller.config;
 import com.lrl.liudrivecore.data.drive.localDriveReader.*;
 import com.lrl.liudrivecore.data.drive.localDriveSaver.*;
 import com.lrl.liudrivecore.data.repo.MemoRepository;
-import com.lrl.liudrivecore.service.tool.intf.*;
+import com.lrl.liudrivecore.service.util.intf.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Settings of data source destination.
+ *
+ */
 @Configuration
 public class IOCenterConfig {
 
@@ -38,34 +42,6 @@ public class IOCenterConfig {
     @Bean
     public LocalDriveSystemImageReader getLocalDriveSystemImageReader(){
         return new LocalDriveSystemImageReader(defaultImageRoot);
-    }
-
-    @Bean
-    public MemoReader getMemoReader(){
-        return new MongoDBMemoReader(repository);
-    }
-
-    @Bean
-    public MemoSaver getMemoSaver(){
-        return new MongoDBMemoSaver(repository);
-    }
-
-    @Bean
-    public VideoSaver getVideoSaver(){
-        return new LocalDriveSystemVideoSaver();
-    }
-    @Bean
-    public VideoReader getVideoReader(){
-        return new LocalDriveSystemVideoReader();
-    }
-
-    @Bean
-    public AudioSaver getAudioSaver(){
-        return new LocalDriveSystemAudioSaver();
-    }
-    @Bean
-    public AudioReader getAudioReader(){
-        return new LocalDriveSystemAudioReader();
     }
 
 }

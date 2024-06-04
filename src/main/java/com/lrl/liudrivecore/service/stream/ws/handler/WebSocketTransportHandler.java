@@ -1,10 +1,10 @@
 package com.lrl.liudrivecore.service.stream.ws.handler;
 
+import com.lrl.liudrivecore.data.drive.localDriveSaver.LocalDriveSystemObjectSaver;
 import com.lrl.liudrivecore.data.pojo.ObjectFileMeta;
-import com.lrl.liudrivecore.data.repo.AudioMetaRepository;
-import com.lrl.liudrivecore.data.repo.ImageMetaRepository;
-import com.lrl.liudrivecore.data.repo.ObjectFileMetaRepository;
-import com.lrl.liudrivecore.data.repo.VideoMetaRepository;
+import com.lrl.liudrivecore.data.pojo.mongo.FileDescription;
+import com.lrl.liudrivecore.data.repo.*;
+import com.lrl.liudrivecore.service.dir.url.URLValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,23 +26,19 @@ public class WebSocketTransportHandler extends BinaryWebSocketHandler {
 
     private HashMap<String, WebSocketDataWriter> dataWriterRegistry;
 
-    private ObjectFileMetaRepository objectFileMetaRepository;
+    private FileDescriptionRepository repository;
 
-    private ImageMetaRepository imageMetaRepository;
+    private URLValidator validator;
 
-    private VideoMetaRepository videoMetaRepository;
-
-    private AudioMetaRepository audioMetaRepository;
+    private LocalDriveSystemObjectSaver saver;
 
     @Autowired
-    public WebSocketTransportHandler(ObjectFileMetaRepository objectFileMetaRepository,
-                                  ImageMetaRepository imageMetaRepository,
-                                  VideoMetaRepository videoMetaRepository,
-                                  AudioMetaRepository audioMetaRepository) {
-        this.objectFileMetaRepository = objectFileMetaRepository;
-        this.imageMetaRepository = imageMetaRepository;
-        this.videoMetaRepository = videoMetaRepository;
-        this.audioMetaRepository = audioMetaRepository;
+    public WebSocketTransportHandler(FileDescriptionRepository repository, LocalDriveSystemObjectSaver saver,
+                                     URLValidator validator) {
+
+        this.repository = repository;
+        this.saver = saver;
+        this.validator = validator;
         dataWriterRegistry = new HashMap<>();
     }
 
@@ -76,8 +72,7 @@ public class WebSocketTransportHandler extends BinaryWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         logger.info("WebSocket binary connection established: " + session.getId());
-        dataWriterRegistry.put(session.getId(), new WebSocketDataWriter(objectFileMetaRepository,
-                imageMetaRepository, videoMetaRepository,audioMetaRepository));
+        dataWriterRegistry.put(session.getId(), new WebSocketDataWriter(repository, saver, validator));
     }
 
     @Override

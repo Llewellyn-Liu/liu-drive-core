@@ -1,7 +1,7 @@
 package com.lrl.liudrivecore.data.dto;
 
 import com.lrl.liudrivecore.data.pojo.ImageMeta;
-import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
+import com.lrl.liudrivecore.service.dir.uploadConfig.LocalDefaultSaveConfiguration;
 
 import java.util.List;
 
@@ -27,7 +27,7 @@ public class ImageFileDTO {
 
     byte[] data;
 
-    private DefaultSaveConfiguration configuration;
+    private LocalDefaultSaveConfiguration configuration;
 
     public String getFilename() {
         return filename;
@@ -109,11 +109,11 @@ public class ImageFileDTO {
         this.data = data;
     }
 
-    public DefaultSaveConfiguration getConfiguration() {
+    public LocalDefaultSaveConfiguration getConfiguration() {
         return configuration;
     }
 
-    public void setConfiguration(DefaultSaveConfiguration configuration) {
+    public void setConfiguration(LocalDefaultSaveConfiguration configuration) {
         this.configuration = configuration;
     }
 

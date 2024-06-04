@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.lrl</groupId>
 	<artifactId>liu-drive-core</artifactId>
-	<version>0.1.4</version>
+	<version>0.1.5</version>
 	<name>liu-drive-core</name>
 	<description>liu-drive-core</description>
 	<properties>
@@ -49,6 +49,13 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-crypto</artifactId>
+		</dependency>
+
+<!--Redis dependency-->
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>5.0.0</version>
 		</dependency>
 
 	</dependencies>

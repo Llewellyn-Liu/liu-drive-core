@@ -1,12 +1,14 @@
 package com.lrl.liudrivecore.controller;
 
-import com.lrl.liudrivecore.service.ImageService;
-import com.lrl.liudrivecore.service.ObjectFileService;
+import com.lrl.liudrivecore.data.dto.ObjectDTO;
+import com.lrl.liudrivecore.data.pojo.mongo.FileDescription;
+import com.lrl.liudrivecore.data.repo.FileDescriptionRepository;
+import com.lrl.liudrivecore.service.ObjectService;
 import com.lrl.liudrivecore.service.UserAuthService;
-import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -26,10 +28,10 @@ public class TestController {
     UserAuthService service;
 
     @Autowired
-    ObjectFileService objectFileService;
+    FileDescriptionRepository userDirectoryRepository;
 
     @Autowired
-    ImageService imageService;
+    ObjectService objectService;
 
     @RequestMapping(value = "/test", method = RequestMethod.GET)
     public void test() {
@@ -109,6 +111,36 @@ public class TestController {
                 .contentLength(resource.contentLength())
                 .contentType(MediaType.parseMediaType("video/mp4"))
                 .body(resource);
+    }
+
+
+    @RequestMapping(value = "/test/dir", method = RequestMethod.GET)
+    public void testDir(HttpServletRequest request, HttpServletResponse response, @RequestBody FileDescription directory
+                        ,@Value("${drive.root}")String v) throws IOException {
+
+        System.out.println(directory.toString());
+        System.out.println(v);
+
+    }
+    @RequestMapping(value = "/test/{*url}", method = RequestMethod.POST)
+    public void testDir(HttpServletRequest request, HttpServletResponse response, @RequestBody ObjectDTO objectDTO, @PathVariable String url
+                        ) throws IOException {
+
+        System.out.println(objectDTO.toString());
+        if(url.startsWith("/")) url = url.substring(1);
+        boolean res = objectService.upload(objectDTO, url, "testcontent".getBytes()) == null;
+
+        System.out.println(res);
+
+    }
+
+
+    @RequestMapping(value = "/test/header", method = RequestMethod.GET)
+    public void testHeader(HttpServletRequest request, HttpServletResponse response
+                        ) throws IOException {
+
+        System.out.println(request.getHeader("Authorization"));
+
     }
 
 

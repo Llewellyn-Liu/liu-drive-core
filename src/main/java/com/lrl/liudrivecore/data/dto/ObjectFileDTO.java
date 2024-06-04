@@ -1,7 +1,7 @@
 package com.lrl.liudrivecore.data.dto;
 
 import com.lrl.liudrivecore.data.pojo.ObjectFileMeta;
-import com.lrl.liudrivecore.service.location.DefaultSaveConfiguration;
+import com.lrl.liudrivecore.service.dir.uploadConfig.LocalDefaultSaveConfiguration;
 
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -27,7 +27,7 @@ public class ObjectFileDTO {
 
     private byte[] data;
 
-    private DefaultSaveConfiguration configuration;
+    private LocalDefaultSaveConfiguration configuration;
 
 
     public ObjectFileDTO(){
@@ -107,11 +107,11 @@ public class ObjectFileDTO {
     }
 
 
-    public DefaultSaveConfiguration getConfiguration() {
+    public LocalDefaultSaveConfiguration getConfiguration() {
         return configuration;
     }
 
-    public void setConfiguration(DefaultSaveConfiguration configuration) {
+    public void setConfiguration(LocalDefaultSaveConfiguration configuration) {
         this.configuration = configuration;
     }
 

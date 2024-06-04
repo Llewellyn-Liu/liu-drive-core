@@ -3,9 +3,9 @@ package com.lrl.liudrivecore.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lrl.liudrivecore.data.pojo.User;
 import com.lrl.liudrivecore.service.UserAuthService;
-import com.lrl.liudrivecore.service.tool.template.frontendInteractive.UserWithLinkedAccount;
-import com.lrl.liudrivecore.service.tool.template.oauth.github.OAuthGitHubToken;
-import com.lrl.liudrivecore.service.tool.template.oauth.github.OAuthGitHubUserInfo;
+import com.lrl.liudrivecore.service.util.template.frontendInteractive.UserWithLinkedAccount;
+import com.lrl.liudrivecore.service.util.template.oauth.github.OAuthGitHubToken;
+import com.lrl.liudrivecore.service.util.template.oauth.github.OAuthGitHubUserInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping(value = "/oauth2")
+@RequestMapping(value = "/v2")
 public class OAuthController {
 
     private static Logger logger = LoggerFactory.getLogger(OAuthController.class);
@@ -47,20 +47,20 @@ public class OAuthController {
         this.userAuthService = userAuthService;
     }
 
-    @RequestMapping(value = "/github", method = RequestMethod.GET)
+    @RequestMapping(value = "/oauth2/github", method = RequestMethod.GET)
     public void githubOAuth(HttpServletResponse response, @Value("${drive.oauth.client-id}") String clientId) throws IOException {
 
         //StateRegistry.register(state...) 注册状态以避免第三方伪请求
         response.sendRedirect(buildGitHubOAuthUrl(
                 clientId,
-                List.of("user", "admin"), "http://localhost:8080/oauth2/github/redirect"));
+                List.of("user", "admin"), "http://localhost:8080/v2/oauth2/github/redirect"));
 
 
     }
 
 
     // Code based on chatGPT solution and GitHub doc
-    @RequestMapping(value = "/github/redirect", method = RequestMethod.GET)
+    @RequestMapping(value = "/oauth2/github/redirect", method = RequestMethod.GET)
     public void setGithubOauthRedirectEndpoint(HttpServletRequest request, HttpServletResponse response,
                                                @Value("${drive.oauth.client-id}") String clientId,
                                                @Value("${drive.oauth.client-secret}") String clientSecret) throws IOException {
@@ -81,7 +81,7 @@ public class OAuthController {
             body.add("client_id", clientId);
             body.add("client_secret", clientSecret);
             body.add("code", code);
-            body.add("redirect_uri", "http://localhost:8080/oauth2/github/redirect");
+            body.add("redirect_uri", "http://localhost:8080/v2/oauth2/github/redirect");
 
             HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
             RestTemplate restTemplate = new RestTemplate();
@@ -154,7 +154,7 @@ public class OAuthController {
     }
 
     // Code based on GitHub doc
-    @RequestMapping(value = "/github/tokenEndpoint", method = RequestMethod.GET)
+    @RequestMapping(value = "/oauth2/github/tokenEndpoint", method = RequestMethod.GET)
     public void setGithubOauthFinalEndpoint(HttpServletRequest request, HttpServletResponse response,
                                                @Value("${drive.oauth.client-id}") String clientId,
                                                @Value("${drive.oauth.client-secret}") String clientSecret) throws IOException {
