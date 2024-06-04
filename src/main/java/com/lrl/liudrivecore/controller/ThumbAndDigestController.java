@@ -102,14 +102,14 @@ public class ThumbAndDigestController {
      * @return
      */
     @RequestMapping(value = "/drive/thumb/base64/{*url}", method = RequestMethod.GET)
-    public ObjectSecureResponseDTOWithData getImageThumbnailBase64(HttpServletRequest request, HttpServletResponse response,
+    public ObjectSecureResponseDTO getImageThumbnailBase64(HttpServletRequest request, HttpServletResponse response,
                                           @PathVariable String url) {
 
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
 
-        ObjectSecureResponseDTOWithData osr
-                = ObjectSecureResponseDTOWithData.createInstanceOf(service.getImage(url));
+        ObjectSecureResponseDTO osr
+                = ObjectSecureResponseDTOWithData.secureCopy(service.getImage(url));
 
 
         response.setStatus(200);

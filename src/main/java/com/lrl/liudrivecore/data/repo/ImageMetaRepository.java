@@ -8,6 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
+/**
+ * @deprecated
+ * Replaced by ImageDescriptionRepository in key-value format
+ * This Class is kept for future reference.
+ */
 public interface ImageMetaRepository extends JpaRepository<ImageMeta, Long> {
 
     ImageMeta getByFilename(String filename);
