@@ -1,8 +1,9 @@
 package com.lrl.liudrivecore.service.dir.uploadConfig;
 
 import java.util.List;
+import java.util.Objects;
 
-public abstract class SaveConfiguration {
+public class SaveConfiguration {
 
     /**
      * v0.1.5
@@ -38,7 +39,7 @@ public abstract class SaveConfiguration {
      */
     protected String accessKey;
 
-    public SaveConfiguration(){
+    public SaveConfiguration() {
 
     }
 
@@ -88,5 +89,18 @@ public abstract class SaveConfiguration {
 
     public void setAccessKey(String accessKey) {
         this.accessKey = accessKey;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || !SaveConfiguration.class.isAssignableFrom(obj.getClass())) return false;
+
+        SaveConfiguration o = (SaveConfiguration) obj;
+        return Objects.equals(drive, o.getDrive()) &&
+                Objects.equals(compressed, o.getCompressed()) &&
+                accessibility == accessibility &&
+                Objects.equals(acl, o.getAcl());
+
     }
 }

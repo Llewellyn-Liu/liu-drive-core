@@ -1,5 +1,6 @@
 package com.lrl.liudrivecore.data.dto;
 
+import com.lrl.liudrivecore.service.dir.uploadConfig.ImageSaveConfiguration;
 import com.lrl.liudrivecore.service.util.record.ObjectRecord;
 
 import java.util.Base64;
@@ -9,17 +10,7 @@ import java.util.Base64;
  */
 public class ObjectSecureResponseDTOWithData extends ObjectSecureResponseDTO{
 
-    ObjectSecureResponseDTO desc;
-
     String data;
-
-    public ObjectSecureResponseDTO getDesc() {
-        return desc;
-    }
-
-    public void setDesc(ObjectSecureResponseDTO desc) {
-        this.desc = desc;
-    }
 
     public String getData() {
         return data;
@@ -29,18 +20,29 @@ public class ObjectSecureResponseDTOWithData extends ObjectSecureResponseDTO{
         this.data = data;
     }
 
-    public static ObjectSecureResponseDTO secureCopy(ObjectRecord or){
+    public static ObjectSecureResponseDTOWithData secureCopy(ObjectRecord or){
         ObjectSecureResponseDTOWithData target = new ObjectSecureResponseDTOWithData();
-        target.setDesc(or.description());
+        ObjectSecureResponseDTO source = or.description();
         target.setData(Base64.getEncoder().encodeToString(or.data()));
+        target.setConfig(source.getConfig());
+
+        target.setMeta(source.getMeta());
+        target.setUrl(source.getUrl());
+        target.setTags(source.getTags());
+
         return target;
     }
 
     @Override
     public String toString() {
         return "ObjectSecureResponseDTOWithData{" +
-                "desc=" + desc +
-                ", data='" + data + '\'' +
+                "data='" + data + '\'' +
+                ", url='" + url + '\'' +
+                ", meta=" + meta +
+                ", config=" + config +
+                ", tags=" + tags +
+                ", sub=" + sub +
+                ", type='" + type + '\'' +
                 '}';
     }
 }

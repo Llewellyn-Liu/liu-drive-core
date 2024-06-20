@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import java.time.ZonedDateTime;
 import java.util.List;
 
+/**
+ * @deprecated
+ */
 @Entity
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class StructuredFileMeta extends Meta{

@@ -1,12 +1,15 @@
 package com.lrl.liudrivecore.controller;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lrl.liudrivecore.data.dto.*;
-import com.lrl.liudrivecore.data.pojo.mongo.FileDescription;
-import com.lrl.liudrivecore.data.pojo.mongo.ImageDescription;
-import com.lrl.liudrivecore.data.pojo.mongo.ObjectMetaWithTag;
+import com.lrl.liudrivecore.data.pojo.MemoBlock;
+import com.lrl.liudrivecore.data.pojo.mongo.*;
 import com.lrl.liudrivecore.service.ObjectService;
 import com.lrl.liudrivecore.service.dir.uploadConfig.DefaultSaveConfigurationImpl;
+import com.lrl.liudrivecore.service.dir.uploadConfig.ImageSaveConfiguration;
 import com.lrl.liudrivecore.service.util.record.ObjectRecord;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +27,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 @RestController
+@CrossOrigin(value = "http://localhost:5173")
 @RequestMapping(value = "/v2")
 public class ObjectController {
 
@@ -67,7 +74,7 @@ public class ObjectController {
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
         // Cases like POST/GET/PUT/DELETE /drive/image/path/ (because the last "/") will be linked /drive
-        if(url.startsWith("image/")){
+        if (url.startsWith("image/")) {
             response.setStatus(400);
         }
 
@@ -101,7 +108,7 @@ public class ObjectController {
         // Protection Code
         if (path.startsWith("/")) path = path.substring(1);
         // Cases like POST/GET/PUT/DELETE /drive/image/path/ (because the last "/") will be linked /drive
-        if(path.startsWith("image/")){
+        if (path.startsWith("image/")) {
             response.setStatus(400);
         }
 
@@ -158,7 +165,7 @@ public class ObjectController {
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
         // Cases like POST/GET/PUT/DELETE /drive/image/path/ (because the last "/") will be linked /drive
-        if(url.startsWith("image/")){
+        if (url.startsWith("image/")) {
             response.setStatus(400);
         }
 
@@ -191,13 +198,13 @@ public class ObjectController {
         byte[] data = json.getData() == null ? null : json.getData().getBytes();
 
         // Protection code
-        if (!json.getType().equals("object") && !json.getType().equals("directory")) {
+        if (json.getType() == null || (!json.getType().equals("object") && !json.getType().equals("directory"))) {
             response.setStatus(400);
             return null;
         }
         if (url.startsWith("/")) url = url.substring(1);
         // Cases like POST/GET/PUT/DELETE /drive/image/path/ (because the last "/") will be linked /drive
-        if(url.startsWith("image/")){
+        if (url.startsWith("image/")) {
             response.setStatus(400);
         }
 
@@ -215,6 +222,29 @@ public class ObjectController {
     }
 
     /**
+     * M4.2.14 Get info of url
+     *
+     * @param request
+     * @param response
+     * @param url
+     * @return
+     */
+    @RequestMapping(value = "/drive/{*url}", method = RequestMethod.GET)
+    public ObjectSecureResponseDTO getUrl(HttpServletRequest request, HttpServletResponse response,
+                                          @PathVariable String url) {
+        // Protection Code
+        if (url.startsWith("/")) url = url.substring(1);
+
+        FileDescription result = objectService.getUrlDescription(url);
+        if (result == null) {
+            response.setStatus(404);
+            return null;
+        }
+
+        return ObjectSecureResponseDTO.secureCopy(result);
+    }
+
+    /**
      * Image APIs
      */
     /**
@@ -229,9 +259,9 @@ public class ObjectController {
      */
     @RequestMapping(value = "/drive/image", method = RequestMethod.POST, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ObjectSecureResponseDTO uploadImage(HttpServletRequest request, HttpServletResponse response,
-                                               @RequestPart("meta") ObjectMetaWithTag meta,
+                                               @RequestPart("meta") ImageMetaWithTag meta,
                                                @RequestPart("file") MultipartFile file,
-                                               @RequestPart("config") DefaultSaveConfigurationImpl config) {
+                                               @RequestPart("config") ImageSaveConfiguration config) {
 
         byte[] data;
         try {
@@ -264,8 +294,6 @@ public class ObjectController {
     @RequestMapping(value = "/drive/image/base64", method = RequestMethod.POST)
     public ObjectSecureResponseDTO uploadImageBase64(HttpServletRequest request, HttpServletResponse response,
                                                      @RequestBody ImageBase64DTO json) {
-
-        logger.info("debug: "+json.getData());
 
         // Protection Code
         byte[] data = Base64.getDecoder().decode(json.getData().split(",")[1].getBytes());
@@ -407,13 +435,18 @@ public class ObjectController {
      * @param url
      */
     @RequestMapping(value = "/drive/image/{*url}", method = RequestMethod.GET)
+    @CrossOrigin(value = "localhost:5173")
     public ResponseEntity<byte[]> getImageAsFile(HttpServletRequest request, HttpServletResponse response,
-                               @PathVariable("url") String url) {
+                                                 @PathVariable("url") String url) {
 
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
 
         ObjectRecord or = objectService.getImage(url);
+        if (or == null) {
+            response.setStatus(404);
+            return null;
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.valueOf(or.description().getMeta().getMimeType()));
@@ -441,22 +474,31 @@ public class ObjectController {
      * @param url
      */
     @RequestMapping(value = "/drive/image/base64/{*url}", method = RequestMethod.GET)
-    public ObjectSecureResponseDTO getImageAsJson(HttpServletRequest request, HttpServletResponse response,
-                                                          @PathVariable("url") String url) {
+    public String getImageAsJson(HttpServletRequest request, HttpServletResponse response,
+                                 @PathVariable("url") String url) {
 
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
 
-        ObjectSecureResponseDTO osr
-                = ObjectSecureResponseDTOWithData.secureCopy(objectService.getImage(url));
+        ObjectRecord or = objectService.getThumb(url);
+
+        if (or == null) {
+            response.setStatus(404);
+            return null;
+        }
+
+        ObjectSecureResponseDTOWithData osr
+                = ObjectSecureResponseDTOWithData.secureCopy(or);
 
 
         response.setStatus(200);
-        return osr;
+
+        return String.format("data:%s;base64,%s", osr.getMeta().getMimeType(), osr.getData());
     }
 
     /**
      * API M4.2.7 Get object as file
+     *
      * @param request
      * @param response
      * @param url
@@ -464,12 +506,12 @@ public class ObjectController {
 
     @RequestMapping(value = "/drive/object/{*url}", method = RequestMethod.GET)
     public ResponseEntity<byte[]> getObjectAsFile(HttpServletRequest request, HttpServletResponse response,
-                                @PathVariable("url") String url) {
+                                                  @PathVariable("url") String url) {
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
 
         ObjectRecord or = objectService.getObject(url);
-        if(or == null){
+        if (or == null) {
             response.setStatus(404);
             return null;
         }
@@ -490,4 +532,107 @@ public class ObjectController {
         return responseEntity;
     }
 
+
+    /**
+     * Memo APIs
+     */
+
+    /**
+     * API M4.2.10 v0.1.5 Upload a Memo
+     *
+     * @param request
+     * @param response
+     * @param memoDTO  A helper class for deserialization
+     * @param userId
+     * @return
+     */
+    @RequestMapping(value = "drive/memo/{userId}", method = RequestMethod.POST)
+    public MemoResponseDTO uploadMemo(HttpServletRequest request, HttpServletResponse response, @RequestBody MemoDTO memoDTO, @PathVariable String userId) {
+
+        logger.info(memoDTO.toString());
+        Memo memo = memoDTO.getMemo();
+        Memo result = objectService.uploadMemo(memo, userId, true);
+        if (result == null) {
+            response.setStatus(400);
+            return null;
+        }
+
+        response.setStatus(201);
+        return new MemoResponseDTO(result);
+
+    }
+
+    /**
+     * API M4.2.11 v0.1.5 Get a Memo
+     *
+     * @param request
+     * @param response
+     * @return
+     */
+    @RequestMapping(value = "drive/memo/{*url}", method = RequestMethod.GET)
+    public MemoResponseDTO getMemo(HttpServletRequest request, HttpServletResponse response, @PathVariable String url) {
+        logger.info("url: " + url);
+        // Protection Code
+        if (url.startsWith("/")) url = url.substring(1);
+
+        Memo result = objectService.getMemo(url);
+        if (result == null) {
+            response.setStatus(400);
+            return null;
+        }
+
+        response.setStatus(200);
+        return new MemoResponseDTO(result);
+    }
+
+    /**
+     * API M4.2.12.1 v0.1.5 Update a Memo
+     *
+     * @param request
+     * @param response
+     * @param memoDTO
+     * @param url
+     * @return
+     */
+    @RequestMapping(value = "drive/memo/{*url}", method = RequestMethod.PUT)
+    public MemoResponseDTO updateMemo(HttpServletRequest request, HttpServletResponse response, @RequestBody MemoDTO memoDTO, @PathVariable String url) {
+
+        Memo memo = memoDTO.getMemo();
+        // Protection Code
+        if (url.startsWith("/")) url = url.substring(1);
+
+        Memo result = objectService.updateMemo(url, memo, HttpMethod.PUT);
+        if (result == null) {
+            response.setStatus(400);
+            return null;
+        }
+
+        response.setStatus(200);
+        return new MemoResponseDTO(result);
+    }
+
+    /**
+     * API M4.2.12.1 v0.1.5 Update a Memo - PATCH method
+     *
+     * @param request
+     * @param response
+     * @param memoDTO
+     * @param url
+     * @return
+     */
+    @RequestMapping(value = "drive/memo/{*url}", method = RequestMethod.PATCH)
+    public MemoResponseDTO patchMemo(HttpServletRequest request, HttpServletResponse response, @RequestBody MemoDTO memoDTO, @PathVariable String url) {
+        Memo memo = memoDTO.getMemo();
+        // Protection Code
+        if (url.startsWith("/")) url = url.substring(1);
+
+        Memo result = objectService.updateMemo(url, memo, HttpMethod.PATCH);
+        if (result == null) {
+            response.setStatus(400);
+            return null;
+        }
+
+        response.setStatus(200);
+        return new MemoResponseDTO(result);
+    }
 }

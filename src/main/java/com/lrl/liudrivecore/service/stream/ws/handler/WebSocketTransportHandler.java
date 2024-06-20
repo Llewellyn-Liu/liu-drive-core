@@ -1,10 +1,11 @@
 package com.lrl.liudrivecore.service.stream.ws.handler;
 
 import com.lrl.liudrivecore.data.drive.localDriveSaver.LocalDriveSystemObjectSaver;
+import com.lrl.liudrivecore.data.dto.schema.Schema;
 import com.lrl.liudrivecore.data.pojo.ObjectFileMeta;
 import com.lrl.liudrivecore.data.pojo.mongo.FileDescription;
 import com.lrl.liudrivecore.data.repo.*;
-import com.lrl.liudrivecore.service.dir.url.URLValidator;
+import com.lrl.liudrivecore.service.ObjectService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,17 +29,20 @@ public class WebSocketTransportHandler extends BinaryWebSocketHandler {
 
     private FileDescriptionRepository repository;
 
-    private URLValidator validator;
+    private Schema schema;
+
+    private ObjectService service;
 
     private LocalDriveSystemObjectSaver saver;
 
     @Autowired
     public WebSocketTransportHandler(FileDescriptionRepository repository, LocalDriveSystemObjectSaver saver,
-                                     URLValidator validator) {
+                                     Schema schema, ObjectService service) {
 
         this.repository = repository;
         this.saver = saver;
-        this.validator = validator;
+        this.schema = schema;
+        this.service =service;
         dataWriterRegistry = new HashMap<>();
     }
 
@@ -53,12 +57,20 @@ public class WebSocketTransportHandler extends BinaryWebSocketHandler {
             byte[] jsonData = message.getPayload().array();
 
             try {
-                dataWriterRegistry.get(session.getId()).register(jsonData);
+                boolean result = dataWriterRegistry.get(session.getId()).register(jsonData);
+                if(!result){
+                    throw new RuntimeException("WebSocket upload Failed");
+                }
             } catch (IOException e) {
                 logger.error("WebSocketTransportHandler failed to create a output stream");
                 e.printStackTrace();
                 session.close();
                 return;
+            } catch (RuntimeException e){
+                e.printStackTrace();
+                session.getAttributes().put("status", "ERR");
+                session.sendMessage(new TextMessage(e.getMessage()));
+                session.close();
             }
 
             session.getAttributes().put("status", "ACK");
@@ -72,7 +84,7 @@ public class WebSocketTransportHandler extends BinaryWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         logger.info("WebSocket binary connection established: " + session.getId());
-        dataWriterRegistry.put(session.getId(), new WebSocketDataWriter(repository, saver, validator));
+        dataWriterRegistry.put(session.getId(), new WebSocketDataWriter(repository, saver, schema,service));
     }
 
     @Override

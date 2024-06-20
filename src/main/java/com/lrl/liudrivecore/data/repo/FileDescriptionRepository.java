@@ -18,6 +18,9 @@ public interface FileDescriptionRepository extends MongoRepository<FileDescripti
 
     List<FileDescription> findAllByMetaUserId(String userId);
 
+    @Query("{'meta.mimeType': {$regex: '^video', $options: 'i'}, 'meta.userId': ?0}")
+    List<FileDescription> findAllVideoTypeOfUserId(String userId, Pageable pageable);
+
     int countAllByMetaUserId(String userId);
 
 }

@@ -5,6 +5,7 @@ import com.lrl.liudrivecore.data.pojo.mongo.FileDescriptionSimpleRecord;
 import com.lrl.liudrivecore.data.pojo.mongo.ImageDescription;
 import com.lrl.liudrivecore.data.pojo.mongo.ObjectMeta;
 import com.lrl.liudrivecore.service.dir.uploadConfig.DefaultSaveConfigurationImpl;
+import com.lrl.liudrivecore.service.dir.uploadConfig.ImageSaveConfiguration;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -34,8 +35,31 @@ public class ObjectSecureResponseDTO{
         this.url = url;
     }
 
+
     public ObjectMetaExposureDTO getMeta() {
         return meta;
+    }
+
+    /**
+     * Copy fields from original meta
+     * @return
+     */
+    public void setMeta(ObjectMeta meta) {
+        if(meta == null) return;
+
+        this.meta = new ObjectMetaExposureDTO();
+        this.getMeta().setUserId(meta.getUserId());
+        this.getMeta().setEtag(meta.getEtag());
+        this.getMeta().setAuthor(meta.getAuthor());
+        this.getMeta().setFilename(meta.getFilename());
+        this.getMeta().setDateCreated(meta.getDateCreated());
+        this.getMeta().setLastModified(meta.getLastModified());
+        this.getMeta().setMimeType(meta.getMimeType());
+    }
+    public void setMeta(ObjectMetaExposureDTO meta) {
+        if(meta == null) return;
+
+        this.meta = meta;
     }
 
     public SaveConfigurationExposureDTO getConfig() {
@@ -75,18 +99,25 @@ public class ObjectSecureResponseDTO{
         this.getConfig().setCompressed(config.getCompressed());
     }
 
-    public void setMeta(ObjectMeta meta) {
-        if(meta == null) return;
+    public void setConfig(ImageSaveConfiguration config) {
+        if(config == null) return;
 
-        this.meta = new ObjectMetaExposureDTO();
-        this.getMeta().setUserId(meta.getUserId());
-        this.getMeta().setEtag(meta.getEtag());
-        this.getMeta().setAuthor(meta.getAuthor());
-        this.getMeta().setFilename(meta.getFilename());
-        this.getMeta().setDateCreated(meta.getDateCreated());
-        this.getMeta().setLastModified(meta.getLastModified());
-        this.getMeta().setMimeType(meta.getMimeType());
+
+        ImageSaveConfigurationExposureDTO conf = new ImageSaveConfigurationExposureDTO();
+        conf.setDrive(config.getDrive());
+        conf.setAccessibility(config.getAccessibility());
+        conf.setCompressed(config.getCompressed());
+        conf.setScale(config.getScale());
+        this.config = conf;
+
     }
+    public void setConfig(SaveConfigurationExposureDTO config) {
+        if(config == null) return;
+
+        this.config = config;
+
+    }
+
 
     public static ObjectSecureResponseDTO secureCopy(FileDescription source){
         ObjectSecureResponseDTO self = new ObjectSecureResponseDTO();
@@ -103,11 +134,11 @@ public class ObjectSecureResponseDTO{
         return self;
     }
 
-    public static ObjectSecureResponseDTO secureCopy(ImageDescription source){
-        ObjectSecureResponseDTO self = new ObjectSecureResponseDTO();
+    public static ImageSecureResponseDTO secureCopy(ImageDescription source){
+        ImageSecureResponseDTO self = new ImageSecureResponseDTO();
         self.setUrl(source.getUrl());
         self.setMeta(source.getMeta());
-        self.setConfig((DefaultSaveConfigurationImpl) source.getConfig());
+        self.setConfig((ImageSaveConfiguration) source.getConfig());
         self.setTags(source.getTags());
         return self;
     }

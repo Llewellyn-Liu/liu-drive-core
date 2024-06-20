@@ -1,8 +1,12 @@
-package com.lrl.liudrivecore.data.dto;
+package com.lrl.liudrivecore.data.pojo.mongo;
 
 import java.time.ZonedDateTime;
 
-public class ObjectMetaExposureDTO {
+/**
+ *
+ * @param <T> for timestamps class
+ */
+public class AbstractMeta<T> {
 
     protected String filename;
 
@@ -10,10 +14,11 @@ public class ObjectMetaExposureDTO {
 
     protected String author;
 
-    protected String dateCreated;
+    protected T dateCreated;
 
-    protected String lastModified;
+    protected T lastModified;
 
+    protected String location;
     protected String etag;
 
     protected String userId;
@@ -42,19 +47,19 @@ public class ObjectMetaExposureDTO {
         this.author = author;
     }
 
-    public String getDateCreated() {
+    public T getDateCreated() {
         return dateCreated;
     }
 
-    public void setDateCreated(String dateCreated) {
+    public void setDateCreated(T dateCreated) {
         this.dateCreated = dateCreated;
     }
 
-    public String getLastModified() {
+    public T getLastModified() {
         return lastModified;
     }
 
-    public void setLastModified(String lastModified) {
+    public void setLastModified(T lastModified) {
         this.lastModified = lastModified;
     }
 
@@ -74,10 +79,12 @@ public class ObjectMetaExposureDTO {
         this.userId = userId;
     }
 
-    @Override
-    public String toString() {
-        return "ObjectMetaExposureDTO{" +
-                "userId='" + userId + '\'' +
-                '}';
+    public String getLocation() {
+        return location;
     }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
 }

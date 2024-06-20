@@ -7,6 +7,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * @deprecated since v0.1.5
+ */
 @Repository
 public interface ObjectFileMetaRepository extends JpaRepository<ObjectFileMeta, Long> {
 

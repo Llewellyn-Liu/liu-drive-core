@@ -5,6 +5,11 @@ import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.Table;
 
+
+/**
+ * @deprecated
+ * Moved to ImageDescription using MongoDB
+ */
 @Entity
 @Table(name = "DR_IMAGEMETA")
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)

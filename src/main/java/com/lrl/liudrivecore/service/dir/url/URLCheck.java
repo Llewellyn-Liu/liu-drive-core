@@ -3,7 +3,10 @@ package com.lrl.liudrivecore.service.dir.url;
 import com.lrl.liudrivecore.data.dto.ImageDTO;
 import com.lrl.liudrivecore.data.dto.ObjectDTO;
 import com.lrl.liudrivecore.data.pojo.StructuredFileMeta;
+import com.lrl.liudrivecore.data.pojo.mongo.ImageMeta;
 import com.lrl.liudrivecore.data.pojo.mongo.ObjectMeta;
+import com.lrl.liudrivecore.service.dir.uploadConfig.DefaultSaveConfigurationImpl;
+import com.lrl.liudrivecore.service.dir.uploadConfig.ImageSaveConfiguration;
 import com.lrl.liudrivecore.service.dir.uploadConfig.SaveConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +56,7 @@ public class URLCheck {
      * @param object ObjectDTO accepted from frontend
      * @return
      */
-    public static String buildUrl(ObjectDTO object, String uploadUrl) {
+    public static String buildUrl(ObjectDTO<ObjectMeta, DefaultSaveConfigurationImpl> object, String uploadUrl) {
         ObjectMeta meta = object.getMeta();
         SaveConfiguration config = object.getConfig();
 
@@ -85,7 +88,7 @@ public class URLCheck {
      * @param uploadUrl
      * @return
      */
-    public static String buildImageUrl(ImageDTO imageDTO, String uploadUrl) {
+    public static String buildImageUrl(ImageDTO<ImageMeta, ImageSaveConfiguration> imageDTO, String uploadUrl) {
         ObjectMeta meta = imageDTO.getMeta();
         SaveConfiguration config = imageDTO.getConfig();
 
@@ -108,7 +111,7 @@ public class URLCheck {
     }
 
 
-    public static String buildUrlForImage(ObjectDTO object, String uploadUrl) {
+    public static String buildUrlForImage(ObjectDTO<ObjectMeta, DefaultSaveConfigurationImpl> object, String uploadUrl) {
         ObjectMeta meta = object.getMeta();
         SaveConfiguration config = object.getConfig();
 

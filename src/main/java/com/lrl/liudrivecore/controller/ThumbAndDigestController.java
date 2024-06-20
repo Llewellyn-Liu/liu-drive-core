@@ -1,9 +1,10 @@
 package com.lrl.liudrivecore.controller;
 
-import com.lrl.liudrivecore.data.dto.ObjectSecureResponseDTO;
-import com.lrl.liudrivecore.data.dto.ObjectSecureResponseDTOWithData;
+import com.lrl.liudrivecore.data.dto.*;
+import com.lrl.liudrivecore.data.pojo.MemoBlock;
 import com.lrl.liudrivecore.data.pojo.mongo.FileDescription;
 import com.lrl.liudrivecore.data.pojo.mongo.ImageDescription;
+import com.lrl.liudrivecore.data.pojo.mongo.Memo;
 import com.lrl.liudrivecore.service.ObjectService;
 import com.lrl.liudrivecore.service.util.record.ObjectRecord;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,17 +15,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RequestMapping(value = "/v2")
+@CrossOrigin(value = "http://localhost:5173")
 @RestController
 public class ThumbAndDigestController {
 
@@ -34,24 +34,33 @@ public class ThumbAndDigestController {
     private ObjectService service;
 
     @Autowired
-    public ThumbAndDigestController( ObjectService service) {
+    public ThumbAndDigestController(ObjectService service) {
         this.service = service;
     }
 
 
-    @RequestMapping(value = "/drive/{*url}", method = RequestMethod.GET)
+    /**
+     * API v0.1.5 M4.3.2
+     * Get a record and include all children infos (rather than only necessary infos)
+     *
+     * @param request
+     * @param response
+     * @param url
+     * @return
+     */
+    @RequestMapping(value = "/drive/list/{*url}", method = RequestMethod.GET)
     public ObjectSecureResponseDTO getUrl(HttpServletRequest request, HttpServletResponse response,
                                           @PathVariable String url) {
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
 
-        FileDescription result = service.getUrlDescription(url);
+        ObjectSecureResponseDTOWithChildInfo result = service.getUrlAndChildren(url);
         if (result == null) {
             response.setStatus(404);
             return null;
         }
 
-        return ObjectSecureResponseDTO.secureCopy(result);
+        return result;
     }
 
 
@@ -68,11 +77,17 @@ public class ThumbAndDigestController {
     public ResponseEntity<byte[]> getImageThumbnail(HttpServletRequest request, HttpServletResponse response,
                                                     @PathVariable String url) {
 
+        System.out.println("Debug: ThumbController " + url);
+
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
 
         // Only when urls are used to reach files in the local file system should be set "File.separator"
         ObjectRecord or = service.getThumb(url);
+        if (or == null) {
+            response.setStatus(404);
+            return null;
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.valueOf(or.description().getMeta().getMimeType()));
@@ -102,18 +117,24 @@ public class ThumbAndDigestController {
      * @return
      */
     @RequestMapping(value = "/drive/thumb/base64/{*url}", method = RequestMethod.GET)
-    public ObjectSecureResponseDTO getImageThumbnailBase64(HttpServletRequest request, HttpServletResponse response,
+    public String getImageThumbnailBase64(HttpServletRequest request, HttpServletResponse response,
                                           @PathVariable String url) {
 
         // Protection Code
         if (url.startsWith("/")) url = url.substring(1);
 
-        ObjectSecureResponseDTO osr
-                = ObjectSecureResponseDTOWithData.secureCopy(service.getImage(url));
+        ObjectRecord or = service.getThumb(url);
+        if (or == null) {
+            response.setStatus(404);
+            return null;
+        }
+
+        ObjectSecureResponseDTOWithData osr
+                = ObjectSecureResponseDTOWithData.secureCopy(or);
 
 
         response.setStatus(200);
-        return osr;
+        return osr.getData();
 
     }
 
@@ -131,7 +152,10 @@ public class ThumbAndDigestController {
     public List<ObjectSecureResponseDTO> getImageMetaListOfUserId(HttpServletRequest request, HttpServletResponse response,
                                                                   @PathVariable String userId,
                                                                   @PathVariable Integer page) {
+
         List<ImageDescription> result = service.getImageDescriptionListOfUser(userId, page);
+
+        List<FileDescription> videos = service.getVideosOfUserId(userId, page);
 
         if (result == null) {
             response.setStatus(400);
@@ -140,6 +164,9 @@ public class ThumbAndDigestController {
 
         ArrayList<ObjectSecureResponseDTO> rev = new ArrayList<>();
         result.stream().forEach(e -> {
+            rev.add(ObjectSecureResponseDTO.secureCopy(e));
+        });
+        videos.stream().forEach(e -> {
             rev.add(ObjectSecureResponseDTO.secureCopy(e));
         });
         response.setStatus(200);
@@ -172,6 +199,29 @@ public class ThumbAndDigestController {
         });
         response.setStatus(200);
         return rev;
+    }
+
+    /**
+     * API M4.3.3 v0.1.5
+     *
+     * @param request
+     * @param response
+     * @param userId
+     * @return
+     */
+    @RequestMapping(value = "/drive/memo/{userId}", method = RequestMethod.GET)
+    public List<MemoResponseDTO> getMemosOfUserId(HttpServletRequest request, HttpServletResponse response, @PathVariable String userId) {
+
+        List<Memo> result = service.getMemosOfUserId(userId);
+        if (result == null) {
+            response.setStatus(404);
+            return null;
+        }
+
+        // 使用stream风格晚点花样
+        List<MemoResponseDTO> responseList = result.stream()
+                .map(MemoResponseDTO::new).toList();
+        return responseList;
     }
 
 

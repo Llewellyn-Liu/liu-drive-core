@@ -3,27 +3,23 @@ package com.lrl.liudrivecore.service.stream.ws.handler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lrl.liudrivecore.data.drive.localDriveSaver.LocalDriveSystemObjectSaver;
+import com.lrl.liudrivecore.data.dto.AbstractObjectDTO;
 import com.lrl.liudrivecore.data.dto.ObjectDTO;
-import com.lrl.liudrivecore.data.pojo.*;
+import com.lrl.liudrivecore.data.dto.schema.Schema;
 import com.lrl.liudrivecore.data.pojo.mongo.FileDescription;
-import com.lrl.liudrivecore.data.pojo.mongo.ImageDescription;
 import com.lrl.liudrivecore.data.pojo.mongo.ObjectMeta;
 import com.lrl.liudrivecore.data.repo.*;
+import com.lrl.liudrivecore.service.ObjectService;
 import com.lrl.liudrivecore.service.dir.EtagBuilder;
-import com.lrl.liudrivecore.service.dir.uploadConfig.LocalDefaultSaveConfiguration;
-import com.lrl.liudrivecore.service.dir.url.URLCheck;
-import com.lrl.liudrivecore.service.dir.url.URLValidator;
+import com.lrl.liudrivecore.service.dir.uploadConfig.DefaultSaveConfigurationImpl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MimeType;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -36,21 +32,25 @@ public class WebSocketDataWriter {
     private FileDescriptionRepository objectRepository;
 
     private LocalDriveSystemObjectSaver saver;
+
+    private ObjectService objectService;
     private BufferedOutputStream out;
 
     private String outputDirectory = "drive";
 
     private Integer processCount = 0;
 
-    private URLValidator urlValidator;
+    private Schema schema;
 
     @Autowired
     protected WebSocketDataWriter(FileDescriptionRepository objectRepository,
                                   LocalDriveSystemObjectSaver localDriveSystemObjectSaver,
-                                  URLValidator validator) {
+                                  Schema schema,
+                                  ObjectService service) {
         this.objectRepository = objectRepository;
         this.saver = localDriveSystemObjectSaver;
-        this.urlValidator = validator;
+        this.schema = schema;
+        this.objectService = service;
         out = null;
     }
 
@@ -66,10 +66,10 @@ public class WebSocketDataWriter {
         System.out.println(jsonNode);
 
         FileDescription desc = readAndSaveJsonData(jsonData);
-        if(desc == null) return false;
+        if (desc == null) return false;
 
         FileOutputStream fos = saver.prepareOutputStream(desc.getMeta().getLocation());
-        if(fos != null) out = new BufferedOutputStream(fos);
+        if (fos != null) out = new BufferedOutputStream(fos);
         else return false;
 
         return true;
@@ -78,11 +78,14 @@ public class WebSocketDataWriter {
     private FileDescription readAndSaveJsonData(byte[] jsonData) throws IOException {
 
         ObjectMapper mapper = new ObjectMapper();
-        ObjectDTO objectDTO = mapper.readValue(jsonData, ObjectDTO.class);
+        ObjectDTO<ObjectMeta, DefaultSaveConfigurationImpl> objectDTO = mapper.readValue(jsonData, ObjectDTO.class);
 
-        // Processing description
-        if(urlValidator.isValid(objectDTO.getUrl(), objectDTO, false)) throw new RuntimeException("Url validator error");
-        urlValidator.buildLocation(objectDTO);
+        // json completion
+        objectDTO.setType("object");
+
+        // Url check
+        objectDTO = schema.filterObjectDTO(objectDTO, objectDTO.getMeta().getUserId(), true, HttpMethod.POST);
+        if(objectDTO == null) return null;
 
         return save(objectDTO);
     }
@@ -116,24 +119,7 @@ public class WebSocketDataWriter {
      * @param objectDTO
      * @return
      */
-    private FileDescription save(ObjectDTO objectDTO) {
-        FileDescription fd = new FileDescription();
-        fd.setUrl(objectDTO.getUrl());
-        fd.setTags(objectDTO.getTags());
-
-        fd.setType(objectDTO.getType());
-        fd.setSub(List.of());
-
-        // Timestamps
-        fd.setMeta(new ObjectMeta());
-        fd.getMeta().setDateCreated(ZonedDateTime.now());
-        fd.getMeta().setLastModified(ZonedDateTime.now());
-
-        fd.setConfig(objectDTO.getConfig());
-        fd.setMeta(objectDTO.getMeta());
-
-        fd = objectRepository.save(fd);
-        EtagBuilder.build(fd);
-        return objectRepository.save(fd);
+    private FileDescription save(ObjectDTO<ObjectMeta, DefaultSaveConfigurationImpl> objectDTO) {
+        return objectService.saveWebSocketObjectDTO(objectDTO);
     }
 }
